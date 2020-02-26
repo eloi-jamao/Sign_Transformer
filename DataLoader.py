@@ -43,18 +43,35 @@ def read_json(filename):
 '''This assumes you have a file named vocaulary.txt in the data folder with all the tokens,
 you can get it from https://github.com/neccam/nslt/blob/master/Data/phoenix2014T.vocab.de#L1 '''
 with open(root + '/data/vocabulary.txt') as f:
-    vocabulary = []
-    for row in f:
-        vocabulary.append(row)
+    vocab2int = {}
+    int2vocab = {}
+    for i,row in enumerate(f):
+        row = row.rstrip()
+        vocab2int[row] = i
+        int2vocab[i] = row
 
 
-vocab = Vocab(strings = vocabulary)
+vocab = Vocab(strings = int2vocab.values())
 nlp = Language(vocab = vocab)
 print(f'Custom language created with {len(nlp.vocab)} vocabulary size')
 
 def sentence_preprocessing(sentence):
     tokens = [token.text for token in nlp.tokenizer(sentence)]
-    print(tokens)
+    tokens = [vocab2int[str(token)] for token in tokens]
+    tokens.insert(0,1)
+    tokens.append(2)
+    return tokens
+
+def decode_sentence(sentence):
+    sentence = [int2vocab[integer] for integer in sentence]
+    return sentence
+
+def print_process(translation):
+    print(translation)
+    translation = sentence_preprocessing(translation)
+    print(translation)
+    translation = decode_sentence(translation)
+    print(translation)
 
 if __name__ == '__main__':
 
@@ -79,4 +96,4 @@ if __name__ == '__main__':
 
     '''Loading text'''
     text_file_path = root + '/data/test_de.txt'
-    #sentence_preprocessing(translation) #Uncomment to print results
+    print_process(translation) #Uncomment to print results
