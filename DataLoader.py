@@ -1,5 +1,4 @@
 import os
-import json
 import spacy
 from spacy.vocab import Vocab
 from spacy.language import Language
@@ -23,20 +22,6 @@ def get_samples(csv_file):
 def describe_row(name,translation):
     print(f'Data from iterator: \n Video name of type {type(name)}: {name}\n Translation of type {type(translation)}: {translation}')
 
-'''JSON'''
-def read_json(filename):
-    '''This function takes the json file from openpose
-    and returns a concatenated list of all keypoints'''
-    keys = ['pose_keypoints_2d','face_keypoints_2d','hand_left_keypoints_2d','hand_right_keypoints_2d']
-    with open(filename) as json_file:
-        data = json.load(json_file)
-        people_dict = data['people']
-        keypoints_dict = people_dict[0]
-        keypoints = []
-        for key in keys:
-            points = keypoints_dict[key]
-            keypoints += points
-    return keypoints
 
 '''TEXT'''
 
@@ -53,11 +38,11 @@ with open(root + '/data/vocabulary.txt') as f:
 
 vocab = Vocab(strings = int2vocab.values())
 nlp = Language(vocab = vocab)
-print(f'Custom language created with {len(nlp.vocab)} vocabulary size')
+#print(f'Custom language created with {len(nlp.vocab)} vocabulary size')
 
 def sentence_preprocessing(sentence):
     tokens = [token.text for token in nlp.tokenizer(sentence)]
-    tokens = [vocab2int[str(token)] for token in tokens]
+    tokens = [vocab2int[token] for token in tokens]
     tokens.insert(0,1)
     tokens.append(2)
     return tokens
@@ -81,18 +66,6 @@ if __name__ == '__main__':
     for i in range(3):
         video, translation = next(data_iter)
         #describe_row(video, translation) #Uncomment to print results
-
-
-
-    '''Loading keypoints'''
-    videos_folder = root + '/data/How2Sign_samples 2/How2Sign_samples/openpose_output/json'
-    videos = os.listdir(videos_folder)
-    keypoints_files = os.listdir(videos_folder + '/' + videos[0])
-
-    for i in range(2):
-        frame_keypoints = read_json(videos_folder + '/' + videos[0] +'/' + keypoints_files[i])
-        #print(f'Frame {i} with {len(frame_keypoints)} keypoints and type {type(frame_keypoints)}') #Uncomment to print results
-
 
     '''Loading text'''
     text_file_path = root + '/data/test_de.txt'
