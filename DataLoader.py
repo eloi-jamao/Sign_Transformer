@@ -1,4 +1,5 @@
 import os
+from torch.utils.data import Dataset
 import spacy
 from spacy.vocab import Vocab
 from spacy.language import Language
@@ -16,6 +17,37 @@ def get_samples(csv_file):
         for row in csv_reader:
             yield row[0], row[-1]
 
+
+
+class SNLT_Dataset(Dataset):
+    def __init__(self, csv_path):
+
+        #Read the CSV annotation file and creates a list with (Keypoint path, traduction)
+        self.samples = []
+        with open(csv_path) as file:
+        csv_reader = csv.reader(file, delimiter='|')
+        next(csv_reader)
+        for row in csv_reader:
+            self.samples.append((row[0], row[-1]))
+            
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+
+        #search the keypoin json
+        #json2keypoint
+        #keypoint padding
+        #label one hot
+
+        return (keypoint, label)
+
+
+if __name__ == '__main__':
+    dataset = TESNamesDataset('/home/syafiq/Data/tes-names/')
+    print(len(dataset))
+    print(dataset[420])
 
 def describe_row(name,translation):
     print(f'Data from iterator: \n Video name of type {type(name)}: {name}\n Translation of type {type(translation)}: {translation}')
