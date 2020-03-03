@@ -3,6 +3,9 @@ import json
 import numpy as np
 import torch
 from torch.utils import data
+import torch.nn.functional as F
+from torch import nn
+import torchvision.transforms as transforms
 
 '''Loading keypoints'''
 videos_folder = os.path.join(os.getcwd(), "data", "json")
@@ -67,13 +70,24 @@ class Dataset(data.Dataset):
     def __getitem__(self, index):
 
         data_sample_path = self.data_dirs[index]
-        label_sample_path = self.labels_dirs[index]
         x = read_sample(data_sample_path)
-        y = read_sample(label_sample_path)
+        x = torch.tensor(x)
+        label_sample_path = self.labels_dirs[index]
 
+        # n = self.sample_length - len(x)
+        # padding = torch.zeros(x[0].shape)
+        # x = torch.cat((x, padding), 1)
+
+        # TODO
+        # y = read_sample(label_sample_path)
+        y = x
         return x, y
 
-
+#2729
 ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
-item = ds.__getitem__(1)
+item2 = ds.__getitem__(1)
+
+ds = [item[0], item2[0]]
+res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
+res.data.numpy()[-1]
