@@ -21,7 +21,7 @@ def json2keypoints(filename):
 					keypoints.append(point)
 	return keypoints
 
-def kp_paddinf(kp_array, max_len):
+def kp_padding(kp_array, max_len=100):
 	while len(kp_array)<max_len:
 		kp_array.append(0)
 
