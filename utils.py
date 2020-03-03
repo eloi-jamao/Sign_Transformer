@@ -3,7 +3,6 @@ import os
 """
 In this module there are many useful fuctions
 """
-root = os.getcwd()
 def json2keypoints(filename):
 	"""
     This function takes the json file from openpose
@@ -22,7 +21,16 @@ def json2keypoints(filename):
 					keypoints.append(point)
 	return keypoints
 
+def kp_paddinf(kp_array, max_len):
+	while len(kp_array)<max_len:
+		kp_array.append(0)
+
+
+
 if __name__ == '__main__':
+	
+	root = os.getcwd()
+
 	''''Loading keypoints'''
 	videos_folder = root + '/data/How2Sign_samples 2/How2Sign_samples/openpose_output/json'
 	videos = os.listdir(videos_folder)

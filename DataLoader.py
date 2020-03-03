@@ -3,11 +3,8 @@ import spacy
 from spacy.vocab import Vocab
 from spacy.language import Language
 import csv
+import utils
 
-root = os.getcwd()
-
-'''CSV'''
-csv_folder = root + '/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual/'
 
 def get_samples(csv_file):
     '''This function yields the name of a video and
@@ -19,26 +16,10 @@ def get_samples(csv_file):
         for row in csv_reader:
             yield row[0], row[-1]
 
+
 def describe_row(name,translation):
     print(f'Data from iterator: \n Video name of type {type(name)}: {name}\n Translation of type {type(translation)}: {translation}')
 
-
-'''TEXT'''
-
-'''This assumes you have a file named vocaulary.txt in the data folder with all the tokens,
-you can get it from https://github.com/neccam/nslt/blob/master/Data/phoenix2014T.vocab.de#L1 '''
-with open(root + '/data/vocabulary.txt') as f:
-    vocab2int = {}
-    int2vocab = {}
-    for i,row in enumerate(f):
-        row = row.rstrip()
-        vocab2int[row] = i
-        int2vocab[i] = row
-
-
-vocab = Vocab(strings = int2vocab.values())
-nlp = Language(vocab = vocab)
-#print(f'Custom language created with {len(nlp.vocab)} vocabulary size')
 
 def sentence_preprocessing(sentence):
     tokens = [token.text for token in nlp.tokenizer(sentence)]
@@ -47,9 +28,11 @@ def sentence_preprocessing(sentence):
     tokens.append(2)
     return tokens
 
+
 def decode_sentence(sentence):
     sentence = [int2vocab[integer] for integer in sentence]
     return sentence
+
 
 def print_process(translation):
     print(translation)
@@ -58,15 +41,39 @@ def print_process(translation):
     translation = decode_sentence(translation)
     print(translation)
 
+
 if __name__ == '__main__':
+
+
+    root = os.getcwd()
+
+    '''CSV'''
+    csv_folder = root + '/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual/'
 
     '''Loading CSV'''
     csv_test = csv_folder + 'PHOENIX-2014-T.test.corpus.csv'
     data_iter = iter(get_samples(csv_test))
     for i in range(3):
         video, translation = next(data_iter)
-        #describe_row(video, translation) #Uncomment to print results
+        describe_row(video, translation) #Uncomment to print results
 
+    
+    '''This assumes you have a file named vocaulary.txt in the data folder with all the tokens,
+    you can get it from https://github.com/neccam/nslt/blob/master/Data/phoenix2014T.vocab.de#L1 '''
+    with open(root + '/data/vocabulary.txt') as f:
+        vocab2int = {}
+        int2vocab = {}
+        for i,row in enumerate(f):
+            row = row.rstrip()
+            vocab2int[row] = i
+            int2vocab[i] = row
+
+
+    vocab = Vocab(strings = int2vocab.values())
+    nlp = Language(vocab = vocab)
+
+    #print(f'Custom language created with {len(nlp.vocab)} vocabulary size')
     '''Loading text'''
     text_file_path = root + '/data/test_de.txt'
     print_process(translation) #Uncomment to print results
+    
