@@ -74,15 +74,20 @@ class Dataset(data.Dataset):
         x = torch.tensor(x)
         label_sample_path = self.labels_dirs[index]
 
-        n = self.sample_length - len(x)
-        padding = nn.ConstantPad1d((0, n), 0)
-        x = padding(x)
+        # n = self.sample_length - len(x)
+        # padding = torch.zeros(x[0].shape)
+        # x = torch.cat((x, padding), 1)
+
         # TODO
         # y = read_sample(label_sample_path)
         y = x
         return x, y
 
-
+#2729
 ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
-item = ds.__getitem__(1)
+item2 = ds.__getitem__(1)
+
+ds = [item[0], item2[0]]
+res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
+res.data.numpy()[-1]
