@@ -21,16 +21,36 @@ def json2keypoints(filename):
 					keypoints.append(point)
 	return keypoints
 
+
 def kp_padding(kp_array, max_len=100):
 	while len(kp_array)<max_len:
 		kp_array.append(0)
 
 
 
+def calculate_max_frames(features_path):
+	tte = os.listdir(features_path)
+	l = []
+	for dir in tte:
+		print(dir)
+		for dir2 in os.listdir(os.path.join(features_path, dir)):
+			lenght = len(os.listdir(os.path.join(features_path, dir, dir2)))
+			l.append(lenght)
+			
+	return max(l), len(l)
+
+
+
 if __name__ == '__main__':
 	
-	root = os.getcwd()
 
+	
+	features_path = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px"
+	print(calculate_max_frames(features_path))
+
+
+
+	"""
 	''''Loading keypoints'''
 	videos_folder = root + '/data/How2Sign_samples 2/How2Sign_samples/openpose_output/json'
 	videos = os.listdir(videos_folder)
@@ -38,3 +58,4 @@ if __name__ == '__main__':
 	for i in range(2):
 		frame_keypoints = json2keypoints(videos_folder + '/' + videos[0] +'/' + keypoints_files[i])
 		print(f'Frame {i} with {len(frame_keypoints)} keypoints and type {type(frame_keypoints)}') #Uncomment to print results
+	"""

@@ -25,7 +25,7 @@ class SNLT_Dataset(Dataset):
         #Read the CSV annotation file and creates a list with (Keypoint path, traduction)
         self.samples = []
         self.cwd = os.getcwd()
-        self.keypoints_dir = os.join(self.cwd, "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints")
+        self.keypoints_dir = os.path.join(self.cwd, "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints")
 
         with open(csv_path) as file:
         csv_reader = csv.reader(file, delimiter='|')
@@ -40,10 +40,10 @@ class SNLT_Dataset(Dataset):
     def __getitem__(self, idx):
 
         #search the keypoint json and convert to list
-        keypoint = json2keypoint(os.join(self.keypoints_dir, self.samples[idx][0]))
+        keypoint = json2keypoint(os.path.join(self.keypoints_dir, self.samples[idx][0]))
 
         #padding the keypoint
-        kp_padding(keypoint)
+        kp_padding(keypoint, max_len = 475)
 
         #label one hot
         label = self.samples[1]
