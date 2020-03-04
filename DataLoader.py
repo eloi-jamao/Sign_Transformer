@@ -7,25 +7,20 @@ import csv
 import utils
 
 
-def get_samples(csv_file):
-    '''This function yields the name of a video and
-    the translation in german as an iterator'''
-    first_line = True
-    with open(csv_file) as file:
-        csv_reader = csv.reader(file, delimiter='|')
-        next(csv_reader)
-        for row in csv_reader:
-            yield row[0], row[-1]
-
-
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, csv_path):
+    def __init__(self, csv_path, train = False):
 
         #Read the CSV annotation file and creates a list with (Keypoint path, traduction)
         self.samples = []
         self.cwd = os.getcwd()
-        self.keypoints_dir = os.path.join(self.cwd, "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints")
+        self.train = train
+
+        if self.train:
+        	self.keypoints_dir = os.path.join(self.cwd, "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints/train")
+        else:
+        	self.keypoints_dir = os.path.join(self.cwd, "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints/test")
+
 
         with open(csv_path) as file:
         csv_reader = csv.reader(file, delimiter='|')
@@ -46,7 +41,7 @@ class SNLT_Dataset(Dataset):
         kp_padding(keypoint, max_len = 475)
 
         #label one hot
-        label = self.samples[1]
+        label = self.samples[idx][1]
 
         return (keypoint, label)
 
@@ -77,7 +72,9 @@ def print_process(translation):
 
 if __name__ == '__main__':
 
+	
 
+	"""
     root = os.getcwd()
 
     '''CSV'''
@@ -109,4 +106,4 @@ if __name__ == '__main__':
     '''Loading text'''
     text_file_path = root + '/data/test_de.txt'
     print_process(translation) #Uncomment to print results
-    
+    """
