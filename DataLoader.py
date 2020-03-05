@@ -7,12 +7,13 @@ import utils
 
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, train = False):
+    def __init__(self, train = False, padding = 475):
 
         #Read the CSV annotation file and creates a list with (Keypoint path, translation)
         self.samples = []
         self.cwd = os.getcwd()
         self.train = train
+        self.padding = padding
         self.dictionary = Dictionary()
 
         if self.train:
@@ -46,10 +47,11 @@ class SNLT_Dataset(Dataset):
         for json_file in os.listdir(os.path.join(self.kp_dir, kp_folder)):
             #convert into a list
             kp = utils.json2keypoints(os.path.join(self.kp_dir, kp_folder, json_file))
-
-            #padding the sentence
-
             kp_sentence.append(kp)
+            
+        #add padding
+        for i in range(self.padding-len(kp_sentence)):
+        	kp_sentence.append([0 for x in range(len(kp_sentence[0]))])
 
         return torch.Tensor(kp_sentence, dtype = torch.float32)
 
@@ -110,5 +112,5 @@ if __name__ == '__main__':
 
     dataset = SNLT_Dataset(train = False)
 
-    for i in range(1):
+    for i in range(5):
         print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )

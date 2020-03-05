@@ -22,11 +22,6 @@ def json2keypoints(filename):
 	return keypoints
 
 
-def kp_padding(kp_array, max_len=100):
-	while len(kp_array)<max_len:
-		kp_array.append(0)
-
-
 
 def calculate_max_frames(features_path):
 	tte = os.listdir(features_path)
