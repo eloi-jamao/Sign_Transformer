@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import spacy
 import csv
 import utils
-
+import torch
 
 
 class SNLT_Dataset(Dataset):
@@ -48,21 +48,27 @@ class SNLT_Dataset(Dataset):
             #convert into a list
             kp = utils.json2keypoints(os.path.join(self.kp_dir, kp_folder, json_file))
             kp_sentence.append(kp)
-            
+
         #add padding
         for i in range(self.padding-len(kp_sentence)):
         	kp_sentence.append([0 for x in range(len(kp_sentence[0]))])
 
-        return torch.Tensor(kp_sentence, dtype = torch.float32)
+        return torch.FloatTensor(kp_sentence)
 
     def process_sentence(self, sentence):
-        tok_sent = [self.dictionary.word2idx[word] for word in sentence.split()]
-        #now introduce the start and end tokens
+
         start, end, unk, pad = [self.dictionary.idx2word[i] for i in range(4)]
+        tok_sent = []
+        for word in sentence.split():
+            if word in self.dictionary.idx2word:
+                tok_sent.append(self.dictionary.word2idx[word])
+            else:
+                tok_sent.append(self.dictionary.word2idx[unk])
+        #now introduce the start and end tokens
         tok_sent.insert(0,self.dictionary.word2idx[start])
         tok_sent.append(self.dictionary.word2idx[end])
         #also might need to pad or add unknown tokens where necessary
-        return torch.Tensor(tok_sent, dtype = torch.float32)
+        return torch.FloatTensor(tok_sent)
 
 class Dictionary(object):
     def __init__(self, vocab_path='./data/vocabulary.txt'):
@@ -86,26 +92,8 @@ class Dictionary(object):
 def describe_row(name,translation):
     print(f'Data from iterator: \n Video name of type {type(name)}: {name}\n Translation of type {type(translation)}: {translation}')
 
-
-def sentence_preprocessing(sentence):
-    tokens = [token.text for token in nlp.tokenizer(sentence)]
-    tokens = [vocab2int[token] for token in tokens]
-    tokens.insert(0,1)
-    tokens.append(2)
-    return tokens
-
-
 def decode_sentence(sentence):
-    sentence = [int2vocab[integer] for integer in sentence]
-    return sentence
-
-
-def print_process(translation):
-    print(translation)
-    translation = sentence_preprocessing(translation)
-    print(translation)
-    translation = decode_sentence(translation)
-    print(translation)
+    pass
 
 
 if __name__ == '__main__':
@@ -114,3 +102,4 @@ if __name__ == '__main__':
 
     for i in range(5):
         print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )
+    
