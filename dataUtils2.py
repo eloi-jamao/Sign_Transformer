@@ -83,10 +83,32 @@ class Dataset(data.Dataset):
         y = x
         return x, y
 
+    
+def avg(data, c=0, w=1):
+    finaldata = []
+    for i in range(0, len(data), w):
+        window = []
+        t = torch.tensor(0);
+        for j in range(i, i + w):
+            if data[j][2].mean() > c & j + w < len(data): #TODO
+                weight = data[j][2]
+                t = t + weight
+                dta = torch.stack((data[j][0]*weight, data[j][1]*weight))
+                window.append(dta)
+        resu = torch.tensor(0)
+        for part in window:
+            resu = resu + part
+        resu = resu / t
+        finaldata.append(resu)
+    return finaldata
+
+
 #2729
 ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
 item2 = ds.__getitem__(1)
+
+foo = avg(item[0], 1, 3)
 
 ds = [item[0], item2[0]]
 res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
