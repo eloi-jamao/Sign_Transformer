@@ -1,39 +1,105 @@
 import os
-import json
+from torch.utils.data import Dataset
 import spacy
-
-root = os.getcwd()
-
-'''Loading keypoints'''
-videos_folder = root + '/data/How2Sign_samples 2/How2Sign_samples/openpose_output/json'
-videos = os.listdir(videos_folder)
-keypoints_files = os.listdir(videos_folder + '/' + videos[0])
+import csv
+import utils
+import torch
 
 
+class SNLT_Dataset(Dataset):
+    def __init__(self, train = False, padding = 475):
 
-def read_json(filename):
-    '''This function takes the json file from openpose
-    and returns a concatenated list of all keypoints'''
-    keys = ['pose_keypoints_2d','face_keypoints_2d','hand_left_keypoints_2d','hand_right_keypoints_2d']
-    with open(filename) as json_file:
-        data = json.load(json_file)
-        people_dict = data['people']
-        keypoints_dict = people_dict[0]
-        keypoints = []
-        for key in keys:
-            points = keypoints_dict[key]
-            keypoints += points
-    return keypoints
+        #Read the CSV annotation file and creates a list with (Keypoint path, translation)
+        self.samples = []
+        self.cwd = os.getcwd()
+        self.train = train
+        self.padding = padding
+        self.dictionary = Dictionary()
 
-for i in range(5):
-    frame_keypoints = read_json(videos_folder + '/' + videos[0] +'/' + keypoints_files[i])
-    print(f'Frame {i} with {len(frame_keypoints)} keypoints and type {type(frame_keypoints)}')
-print(len(keypoints_files))
+        if self.train:
+            self.kp_dir = "/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints/train/"
+            self.csv_path = "/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual/train_annotations"
+        else:
+            self.kp_dir = "./data/keypoints/test/" #"/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints/test/"
+            self.csv_path = "./data/annotations/test_annotations.csv"   #"/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual/test_annotations.csv"
 
-'''Loading text'''
-text = r"This is a one minute video and i don't know what she is saying so i'm just making it up while watching it, also i think all the gestures are very well executed although I don't speak sign language. Tomorrow there will be some sun in the day and some rain in the night."
+        with open(self.csv_path) as file:
+            csv_reader = csv.reader(file, delimiter='|')
+            next(csv_reader)
+            for row in csv_reader:
+                self.samples.append((row[0], row[-1]))
 
-spacy_en = spacy.load('en')
 
-def tokenize_en(text):
-    return [tok.text for tok in spacy_en.tokenizer(text)]
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+
+        kp_sentence = self.process_kps(self.samples[idx][0])
+        label = self.process_sentence(self.samples[idx][1])
+
+        return (kp_sentence, label)
+
+    def process_kps(self, kp_folder):
+
+        kp_sentence = []
+        #search the keypoints json
+        for json_file in os.listdir(os.path.join(self.kp_dir, kp_folder)):
+            #convert into a list
+            kp = utils.json2keypoints(os.path.join(self.kp_dir, kp_folder, json_file))
+            kp_sentence.append(kp)
+
+        #add padding
+        for i in range(self.padding-len(kp_sentence)):
+        	kp_sentence.append([0 for x in range(len(kp_sentence[0]))])
+
+        return torch.FloatTensor(kp_sentence)
+
+    def process_sentence(self, sentence):
+
+        start, end, unk, pad = [self.dictionary.idx2word[i] for i in range(4)]
+        tok_sent = []
+        for word in sentence.split():
+            if word in self.dictionary.idx2word:
+                tok_sent.append(self.dictionary.word2idx[word])
+            else:
+                tok_sent.append(self.dictionary.word2idx[unk])
+        #now introduce the start and end tokens
+        tok_sent.insert(0,self.dictionary.word2idx[start])
+        tok_sent.append(self.dictionary.word2idx[end])
+        #also might need to pad or add unknown tokens where necessary
+        return torch.FloatTensor(tok_sent)
+
+class Dictionary(object):
+    def __init__(self, vocab_path='./data/vocabulary.txt'):
+
+        self.idx2word = self.read_vocab(vocab_path)
+        self.word2idx = {word:i for i,word in enumerate(self.idx2word)}
+
+    def read_vocab(self, path):
+        vocabulary = []
+        with open(path) as f:
+            for i,line in enumerate(f):
+                word = line.rstrip()
+                vocabulary.append(word)
+
+        return vocabulary
+
+    def __len__(self):
+        return len(self.idx2word)
+
+
+def describe_row(name,translation):
+    print(f'Data from iterator: \n Video name of type {type(name)}: {name}\n Translation of type {type(translation)}: {translation}')
+
+def decode_sentence(sentence):
+    pass
+
+
+if __name__ == '__main__':
+
+    dataset = SNLT_Dataset(train = False)
+
+    for i in range(5):
+        print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )
+    
