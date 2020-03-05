@@ -100,7 +100,7 @@ def avg(data, c=0, w=1):
             resu = resu + part
         resu = resu / t
         finaldata.append(resu)
-    return finaldata
+    return torch.stack(finaldata)
 
 
 #2729
