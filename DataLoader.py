@@ -68,7 +68,7 @@ class SNLT_Dataset(Dataset):
         tok_sent.insert(0,self.dictionary.word2idx[start])
         tok_sent.append(self.dictionary.word2idx[end])
         #also might need to pad or add unknown tokens where necessary
-        return torch.FloatTensor(tok_sent)
+        return torch.LongTensor(tok_sent)
 
 class Dictionary(object):
     def __init__(self, vocab_path='./data/vocabulary.txt'):
@@ -102,4 +102,3 @@ if __name__ == '__main__':
 
     for i in range(5):
         print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )
-    
