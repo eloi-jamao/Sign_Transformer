@@ -51,7 +51,7 @@ class SNLT_Dataset(Dataset):
 
             kp_sentence.append(kp)
 
-        return kp_sentence
+        return torch.Tensor(kp_sentence, dtype = torch.float32)
 
     def process_sentence(self, sentence):
         tok_sent = [self.dictionary.word2idx[word] for word in sentence.split()]
@@ -60,7 +60,7 @@ class SNLT_Dataset(Dataset):
         tok_sent.insert(0,self.dictionary.word2idx[start])
         tok_sent.append(self.dictionary.word2idx[end])
         #also might need to pad or add unknown tokens where necessary
-        return tok_sent
+        return torch.Tensor(tok_sent, dtype = torch.float32)
 
 class Dictionary(object):
     def __init__(self, vocab_path='./data/vocabulary.txt'):
