@@ -35,12 +35,12 @@ opt = optim.Adam(model.parameters())
 
 test_iter = iter(test_loader)
 data, target = next(test_iter)
+
 output = model(data)
 print(output.shape, target.shape)
 
-output = output[0][:target.shape[-1]].unsqueeze(dim=0)
-target = nn.functional.one_hot(target, num_classes=vocab_size)
+output, target = output[0][:target.shape[-1]], target.squeeze(dim=0)
 print(output.shape, target.shape)
 
-loss = criterion(output,target)
-print(loss)
+loss = criterion(output, target)
+loss.backward()
