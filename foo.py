@@ -42,5 +42,5 @@ output = output[0][:target.shape[-1]].unsqueeze(dim=0)
 target = nn.functional.one_hot(target, num_classes=vocab_size)
 print(output.shape, target.shape)
 
-loss = criterion(output,target)
+loss = criterion(output.contiguous().view(-1, output.size(-1)), target.contiguous().view(-1))
 print(loss)
