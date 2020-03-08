@@ -84,18 +84,19 @@ class Dataset(data.Dataset):
         return x, y
 
 
-def avg(data, c=0.0, w=1, u=0):
+def avg(data, c=0.0, w=1, u=0, device='cpu'):
+    data.to(device)
     finaldata = []
     for i in range(0, len(data), w):
         window = []
-        t = torch.tensor(0)
+        t = torch.tensor(0).to(device)
         for j in range(i - u, i + w + u):
-            if j < len(data) and data[j][2].mean() > c:
+            if 0 <= j < len(data) and data[j][2].mean() > c:
                 weight = data[j][2]
                 t = torch.add(t, weight)
                 dta = torch.stack((data[j][0]*weight, data[j][1]*weight))
                 window.append(dta)
-        resu = torch.tensor(0)
+        resu = torch.tensor(0).to(device)
         for part in window:
             resu = torch.add(resu, part)
         if t.max() > 0:
@@ -108,7 +109,7 @@ ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
 item2 = ds.__getitem__(1)
 
-foo = avg(item[0], 0.5, 3)
+foo = avg(item[0], 0.5, 3, device='cuda')
 
 ds = [item[0], item2[0]]
 res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
