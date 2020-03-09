@@ -82,20 +82,28 @@ class Dataset(data.Dataset):
         # y = read_sample(label_sample_path)
         y = x
         return x, y
+# def skp(prev, data):
 
 
-def avg(data, threshold=0.0, windowing=1, overlap=0, device='cpu'):
+def avg(data, threshold=0.0, windowing=1, overlap=0, skip=0.0, loss=nn.MSELoss(), device='cpu'):
     data.to(device)
     finaldata = []
+    dta = None
+    prev = None
     for i in range(0, len(data), windowing):
         window = []
         t = torch.tensor(0).to(device)
         for j in range(i - overlap, i + windowing + overlap):
             if 0 <= j < len(data) and data[j][2].mean() > threshold:
+                if dta is not None:
+                    prev = dta
+                dta = data[j][:2]
+                if prev is not None and loss(dta, prev) < skip:
+                    continue
                 weight = data[j][2]
                 t = torch.add(t, weight)
-                dta = torch.stack((data[j][0]*weight, data[j][1]*weight))
-                window.append(dta)
+
+                window.append(dta * weight)
         resu = torch.tensor(0).to(device)
         for part in window:
             resu = torch.add(resu, part)
@@ -109,7 +117,7 @@ ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
 item2 = ds.__getitem__(1)
 
-foo = avg(item[0], 0.5, 3, device='cuda')
+foo = avg(item[0], 0.5, 3, skip=1000)
 
 ds = [item[0], item2[0]]
 res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
