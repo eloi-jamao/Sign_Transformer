@@ -84,14 +84,14 @@ class Dataset(data.Dataset):
         return x, y
 
 
-def avg(data, c=0.0, w=1, u=0, device='cpu'):
+def avg(data, threshold=0.0, windowing=1, overlap=0, device='cpu'):
     data.to(device)
     finaldata = []
-    for i in range(0, len(data), w):
+    for i in range(0, len(data), windowing):
         window = []
         t = torch.tensor(0).to(device)
-        for j in range(i - u, i + w + u):
-            if 0 <= j < len(data) and data[j][2].mean() > c:
+        for j in range(i - overlap, i + windowing + overlap):
+            if 0 <= j < len(data) and data[j][2].mean() > threshold:
                 weight = data[j][2]
                 t = torch.add(t, weight)
                 dta = torch.stack((data[j][0]*weight, data[j][1]*weight))
