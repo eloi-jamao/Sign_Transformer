@@ -1,5 +1,5 @@
 import os
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import spacy
 import csv
 import utils
@@ -67,7 +67,9 @@ class SNLT_Dataset(Dataset):
         #now introduce the start and end tokens
         tok_sent.insert(0,self.dictionary.word2idx[start])
         tok_sent.append(self.dictionary.word2idx[end])
-        #also might need to pad or add unknown tokens where necessary
+        #padding sentence to max_seq
+        for i in range(35 - len(tok_sent)):
+            tok_sent.append(self.dictionary.word2idx[pad])
         return torch.LongTensor(tok_sent)
 
 class Dictionary(object):
@@ -99,6 +101,34 @@ def decode_sentence(sentence):
 if __name__ == '__main__':
 
     dataset = SNLT_Dataset(train = False)
+    test_loader = DataLoader(dataset,
+                             batch_size = 5,
+                             shuffle = False,
+                             drop_last = True)
 
-    for i in range(5):
+    for i in range(0):
         print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )
+
+    first = True
+    print('to the loop')
+    for i in range(len(dataset)):
+        src, trg = dataset[i]
+        if first:
+            print('sample',i,'with size', trg.size())
+            first = False
+            size = trg.size()
+        if trg.size() != size:
+            print('False!')
+            print('sample',i,'with size', trg.size())
+            break
+    first = True
+    for i, batch in enumerate(test_loader):
+        src, trg = batch
+        if first:
+            print('batch',i,'with size', trg.size())
+            first = False
+            break
+        print(i,'/',len(dataset)/5)
+        if trg.size() != size:
+            print('Diferent size')
+            break
