@@ -3,14 +3,15 @@ import os
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 """
 In this module there are many useful fuctions
 """
 
-'''
-base_dir = "keypoints/test"
+
+base_dir = './data/keypoints/test'
 dirs = os.listdir(base_dir)
-'''
+
 
 # expected number of keypoints
 # we can try to reduce the number of face keypoints since it seems that
@@ -127,11 +128,11 @@ if __name__ == '__main__':
 
 
 
-	features_path = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px"
-	print(calculate_max_frames(features_path))
-	# show_frames_stats()  # ok
-    # check_files()  # ok
-    # confidence_stats()  # based on confidence distribution we can take frames with average confidence > 0.25
+	#features_path = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px"
+	#print(calculate_max_frames(features_path))
+	show_frames_stats()  # ok
+    #check_files()  # ok
+    #confidence_stats()  # based on confidence distribution we can take frames with average confidence > 0.25
 
 
 
