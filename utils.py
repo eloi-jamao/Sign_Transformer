@@ -7,8 +7,10 @@ import matplotlib.pyplot as plt
 In this module there are many useful fuctions
 """
 
+'''
 base_dir = "keypoints/test"
 dirs = os.listdir(base_dir)
+'''
 
 # expected number of keypoints
 # we can try to reduce the number of face keypoints since it seems that
