@@ -8,7 +8,7 @@ import dataLoaderUtils
 # from nltk.translate.bleu_score import sentence_bleu
 
 '''Loading keypoints'''
-videos_folder = os.path.join(os.getcwd(), "data", "json")
+videos_folder = os.path.join(os.getcwd(), "data", "keypoints", "test")
 
 
 class Dataset(data.Dataset):
@@ -67,15 +67,15 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(2729, 1000, kernel_size=(3, 10)),
+            nn.Conv2d(242, 200, kernel_size=(3, 10)),
             nn.ReLU(True),
-            nn.Conv2d(1000, 500, kernel_size=(1, 3)),
+            nn.Conv2d(200, 100, kernel_size=(1, 3)),
             nn.ReLU(True)
         )
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(500, 1000, kernel_size=(1, 3)),
+            nn.ConvTranspose2d(100, 200, kernel_size=(1, 3)),
             nn.ReLU(True),
-            nn.ConvTranspose2d(1000, 2729, kernel_size=(3, 10)),
+            nn.ConvTranspose2d(200, 242, kernel_size=(3, 10)),
             nn.ReLU(True))
 
     def forward(self, x):
