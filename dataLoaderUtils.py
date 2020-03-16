@@ -86,7 +86,7 @@ class Dataset(data.Dataset):
 # def skp(prev, data):
 
 
-def avg(data, frame_threshold=0.0, windowing=1, overlap=0, skip=0.0, kp_thresholde=0.0, loss=nn.MSELoss(), device='cpu'):
+def avg(data, frame_threshold=0.0, windowing=1, overlap=0, similar_threshold=0.0, kp_thresholde=0.0, loss=nn.MSELoss(), device='cpu'):
     data.to(device)
     finaldata = []
     dta = None
@@ -100,7 +100,7 @@ def avg(data, frame_threshold=0.0, windowing=1, overlap=0, skip=0.0, kp_threshol
                 if dta is not None:
                     prev = dta
                 dta = data[j]
-                if prev is not None and loss(dta[:2], prev[:2]) < skip:
+                if prev is not None and loss(dta[:2], prev[:2]) < similar_threshold:
                     continue
 
                 weight = data[j][2]
@@ -125,7 +125,7 @@ ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
 item2 = ds.__getitem__(1)
 
-foo = avg(item[0], frame_threshold=0.5, windowing=3, kp_thresholde=0.6, skip=1000)
+foo = avg(item[0], frame_threshold=0.5, windowing=3, kp_thresholde=0.6, similar_threshold=1000)
 
 ds = [item[0], item2[0]]
 res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
