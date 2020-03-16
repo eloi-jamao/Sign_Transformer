@@ -20,6 +20,7 @@ def read_json_2_openpose1dframe(filename):
         keypoints_y = []
         keypoints_c = []
         keypoints = keypoints_dict['pose_keypoints_2d'][:8 * 3]
+        keypoints += keypoints_dict['face_keypoints_2d'][48*3:67*3]
         keypoints += keypoints_dict['hand_left_keypoints_2d']
         keypoints += keypoints_dict['hand_right_keypoints_2d']
         for i, point in enumerate(keypoints):
@@ -85,7 +86,7 @@ class Dataset(data.Dataset):
 # def skp(prev, data):
 
 
-def avg(data, threshold=0.0, windowing=1, overlap=0, skip=0.0, loss=nn.MSELoss(), device='cpu'):
+def avg(data, frame_threshold=0.0, windowing=1, overlap=0, skip=0.0, kp_thresholde=0.0, loss=nn.MSELoss(), device='cpu'):
     data.to(device)
     finaldata = []
     dta = None
@@ -94,16 +95,23 @@ def avg(data, threshold=0.0, windowing=1, overlap=0, skip=0.0, loss=nn.MSELoss()
         window = []
         t = torch.tensor(0).to(device)
         for j in range(i - overlap, i + windowing + overlap):
-            if 0 <= j < len(data) and data[j][2].mean() > threshold:
+            if 0 <= j < len(data) and data[j][2].mean() > frame_threshold:
+
                 if dta is not None:
                     prev = dta
-                dta = data[j][:2]
-                if prev is not None and loss(dta, prev) < skip:
+                dta = data[j]
+                if prev is not None and loss(dta[:2], prev[:2]) < skip:
                     continue
+
                 weight = data[j][2]
                 t = torch.add(t, weight)
 
-                window.append(dta * weight)
+                for position, c in enumerate(dta[2]):
+                    if c < kp_thresholde:
+                        dta[0][position] = 0
+                        dta[1][position] = 0
+
+                window.append(dta[:2] * weight)
         resu = torch.tensor(0).to(device)
         for part in window:
             resu = torch.add(resu, part)
@@ -117,7 +125,7 @@ ds = Dataset(videos_folder, videos_folder)
 item = ds.__getitem__(0)
 item2 = ds.__getitem__(1)
 
-foo = avg(item[0], 0.5, 3, skip=1000)
+foo = avg(item[0], frame_threshold=0.5, windowing=3, kp_thresholde=0.6, skip=1000)
 
 ds = [item[0], item2[0]]
 res = torch.nn.utils.rnn.pad_sequence(ds, batch_first=True, padding_value=0)
