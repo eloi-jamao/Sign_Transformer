@@ -7,27 +7,26 @@ import torch
 
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, train = False, padding = 475):
+    def __init__(self, split, kp_path, csv_path, gloss = False, padding = 475):
 
+        splits = ['train','test','dev']
+        self.split = split
+        if self.split not in splits:
+            raise Exception('Split must be one of:', splits)
         #Read the CSV annotation file and creates a list with (Keypoint path, translation)
         self.samples = []
         self.cwd = os.getcwd()
-        self.train = train
         self.padding = padding
         self.dictionary = Dictionary()
+        self.kp_dir = os.path.join(kp_path, split)
+        self.csv_file = csv_path + '/PHOENIX-2014-T.' + self.split + '.corpus.csv'
 
-        if self.train:
-            self.kp_dir = "/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints/train/"
-            self.csv_path = "/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual/train_annotations"
-        else:
-            self.kp_dir = "./data/keypoints/test/" #"/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/keypoints/test/"
-            self.csv_path = "./data/annotations/test_annotations.csv"   #"/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual/test_annotations.csv"
-
-        with open(self.csv_path) as file:
+        with open(self.csv_file) as file:
             csv_reader = csv.reader(file, delimiter='|')
             next(csv_reader)
+            col = -2 if gloss else -1
             for row in csv_reader:
-                self.samples.append((row[0], row[-1]))
+                self.samples.append((row[0], row[col]))
 
 
     def __len__(self):
@@ -100,12 +99,14 @@ def decode_sentence(sentence):
 
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(train = False)
-    test_loader = DataLoader(dataset,
-                             batch_size = 5,
-                             shuffle = False,
-                             drop_last = True)
+    kp_path = './data/keypoints' #change to your paths
+    csv_path = './../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual'
 
+    dataset = SNLT_Dataset(split = 'test', kp_path = kp_path, csv_path = csv_path, gloss = True)
+    test_loader = DataLoader(dataset, batch_size = 5, shuffle = False)
+
+    print('all went well')
+    '''
     for i in range(0):
         print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )
 
@@ -132,3 +133,5 @@ if __name__ == '__main__':
         if trg.size() != size:
             print('Diferent size')
             break
+    '''
+#'./../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual'
