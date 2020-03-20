@@ -4,10 +4,10 @@ import spacy
 import csv
 import utils
 import torch
-
+from PIL import Image
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, split, kp_path, csv_path, gloss = False, padding = 475):
+    def __init__(self, split, frames_path, csv_path, gloss = False, padding = 475, kp_path = None):
 
         splits = ['train','test','dev']
         self.split = split
@@ -18,7 +18,8 @@ class SNLT_Dataset(Dataset):
         self.cwd = os.getcwd()
         self.padding = padding
         self.dictionary = Dictionary()
-        self.kp_dir = os.path.join(kp_path, split)
+        self.img_dir = os.path.join(frames_path, split)
+        #self.kp_dir = os.path.join(kp_path, split)
         self.csv_file = csv_path + '/PHOENIX-2014-T.' + self.split + '.corpus.csv'
 
         with open(self.csv_file) as file:
@@ -34,11 +35,32 @@ class SNLT_Dataset(Dataset):
 
     def __getitem__(self, idx):
 
-        kp_sentence = self.process_kps(self.samples[idx][0])
+        img_fold = os.path.join(self.img_dir, self.samples[idx][0])
         label = self.process_sentence(self.samples[idx][1])
 
-        return (kp_sentence, label)
+        return (img_fold, label)
 
+
+    def process_sentence(self, sentence):
+
+        start, end, unk, pad = [self.dictionary.idx2word[i] for i in range(4)]
+        tok_sent = []
+        for word in sentence.split():
+            if word in self.dictionary.idx2word:
+                tok_sent.append(self.dictionary.word2idx[word])
+            else:
+                tok_sent.append(self.dictionary.word2idx[unk])
+        #print('sentence', sentence)
+        #print('token sentence', tok_sent)
+        #now introduce the start and end tokens
+        tok_sent.insert(0,self.dictionary.word2idx[start])
+        tok_sent.append(1) # 1 is the end token
+        #padding sentence to max_seq
+        for i in range(35 - len(tok_sent)):
+            tok_sent.append(self.dictionary.word2idx[pad])
+        return torch.LongTensor(tok_sent)
+
+    '''
     def process_kps(self, kp_folder):
 
         kp_sentence = []
@@ -53,23 +75,7 @@ class SNLT_Dataset(Dataset):
         	kp_sentence.append([0 for x in range(len(kp_sentence[0]))])
 
         return torch.FloatTensor(kp_sentence)
-
-    def process_sentence(self, sentence):
-
-        start, end, unk, pad = [self.dictionary.idx2word[i] for i in range(4)]
-        tok_sent = []
-        for word in sentence.split():
-            if word in self.dictionary.idx2word:
-                tok_sent.append(self.dictionary.word2idx[word])
-            else:
-                tok_sent.append(self.dictionary.word2idx[unk])
-        #now introduce the start and end tokens
-        tok_sent.insert(0,self.dictionary.word2idx[start])
-        tok_sent.append(self.dictionary.word2idx[end])
-        #padding sentence to max_seq
-        for i in range(35 - len(tok_sent)):
-            tok_sent.append(self.dictionary.word2idx[pad])
-        return torch.LongTensor(tok_sent)
+    '''
 
 class Dictionary(object):
     def __init__(self, vocab_path='./data/vocabulary.txt'):
@@ -99,39 +105,18 @@ def decode_sentence(sentence):
 
 if __name__ == '__main__':
 
-    kp_path = './data/keypoints' #change to your paths
+    frames_path = './../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px' #change to your paths
     csv_path = './../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual'
 
-    dataset = SNLT_Dataset(split = 'test', kp_path = kp_path, csv_path = csv_path, gloss = True)
-    test_loader = DataLoader(dataset, batch_size = 5, shuffle = False)
+    dataset = SNLT_Dataset(split = 'test', frames_path = frames_path, csv_path = csv_path, gloss = False)
+    test_loader = DataLoader(dataset, batch_size = 1, shuffle = False)
 
-    print('all went well')
-    '''
-    for i in range(0):
-        print(len(dataset[i][0]), len(dataset[i][0][0]), dataset[i][1] )
 
-    first = True
-    print('to the loop')
-    for i in range(len(dataset)):
-        src, trg = dataset[i]
-        if first:
-            print('sample',i,'with size', trg.size())
-            first = False
-            size = trg.size()
-        if trg.size() != size:
-            print('False!')
-            print('sample',i,'with size', trg.size())
-            break
-    first = True
-    for i, batch in enumerate(test_loader):
-        src, trg = batch
-        if first:
-            print('batch',i,'with size', trg.size())
-            first = False
-            break
-        print(i,'/',len(dataset)/5)
-        if trg.size() != size:
-            print('Diferent size')
-            break
-    '''
+    for img_path, sentence in test_loader:
+        print('image_directory', img_path)
+        print('sentence', sentence)
+        break
+
+
+
 #'./../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/annotations/manual'
