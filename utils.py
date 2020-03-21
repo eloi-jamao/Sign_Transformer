@@ -1,9 +1,11 @@
 import json
 import os
 import numpy as np
-import seaborn as sns
+import csv
+import operator
+#import seaborn as sns
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 """
 In this module there are many useful fuctions
 """
@@ -123,21 +125,76 @@ def confidence_stats():
     plt.show()
 
 
+def create_gloss_vocab():
+    vocabulary = []
+    token_vocab = {}
+    num_tokens=0
+    annotation_path = "data/annotations/"
+    for csv_file in ["dev.csv", "train.csv", "test.csv"]:
+        csv_path = annotation_path + csv_file
+        print(csv_path)
+        with open(csv_path) as file:
+            csv_reader = csv.reader(file, delimiter='|')
+            next(csv_reader)
+            for row in csv_reader:
+                for gword in row[-2].split():
+                    num_tokens += 1
+                    if gword not in vocabulary:
+                        #print(gword)
+                        vocabulary.append(gword)
+                        token_vocab[gword] = 1
+                    else:
+                        token_vocab[gword] += 1
+    vocabulary.sort()
+    list_dict = list(token_vocab.items())
+    list_dict.sort(key = operator.itemgetter(1), reverse = True)
+    #print(list_dict)
+    print("number of tokens = ", num_tokens)
+    #print(len(vocabulary))
+    coverage_list = []
+    for i in range(len(list_dict)):
+        if list_dict[i][1] > 1:
+            coverage_list.append(list_dict[i])
+    print(coverage_list)
+    print(len(coverage_list))
+    print(compute_coverage(coverage_list, num_tokens))
+
+
+
+    """
+    #create a vocabulary file .txt
+    vocabulary_file = annotation_path + "gloss_tokens.txt"
+    with open(vocabulary_file, "w") as file:
+        for gword, reps in list_dict:
+            file.write(gword+ "  "+ str(reps) + "\n")
+    """
+
+
+def compute_coverage(list_vocab, num_tokens):
+    count = 0
+    for word, tok in list_vocab:
+        count += tok
+    return count/num_tokens
+
+
+
+
 
 if __name__ == '__main__':
 
+    create_gloss_vocab()
 
 
 	#features_path = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px"
 	#print(calculate_max_frames(features_path))
-	show_frames_stats()  # ok
+	#show_frames_stats()  # ok
     #check_files()  # ok
     #confidence_stats()  # based on confidence distribution we can take frames with average confidence > 0.25
 
 
 
-	"""
-	''''Loading keypoints'''
+    """
+	'Loading keypoints'''
 	videos_folder = root + '/data/How2Sign_samples 2/How2Sign_samples/openpose_output/json'
 	videos = os.listdir(videos_folder)
 	keypoints_files = os.listdir(videos_folder + '/' + videos[0])
