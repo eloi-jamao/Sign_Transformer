@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
+import os
 
 class EncoderDecoder(nn.Module):
     """
@@ -267,6 +268,8 @@ def run_epoch(data_iter, model, loss_compute):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
+        #src, trg = batch
+        #batch = Batch(src, trg)
         out = model.forward(batch.src, batch.trg,
                             batch.src_mask, batch.trg_mask)
         loss = loss_compute(out, batch.trg_y, batch.ntokens)
@@ -399,16 +402,41 @@ def rebatch(pad_idx, batch):
 
 
 if __name__ == '__main__':
-    V = 11
-    criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
-    model = make_model(V, V, N=2)
+
+    model_dir = './models/G2T' #folder to save the model state
+    src_vocab = 11
+    trg_vocab = 11
+    batch_size = 5
+    epochs = 5
+    N_blocks = 2
+
+    train_loader = data_gen(src_vocab, batch_size, 10)
+    valid_loader = data_gen(src_vocab, batch_size, 10)
+
+    criterion = LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
+    model = make_model(src_vocab, trg_vocab, N=N_blocks, d_model=512, h=8)
     model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
             torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
-    for epoch in range(3):
-        model.train()
-        run_epoch(data_gen(V, 30, 20), model,
-                  SimpleLossCompute(model.generator, criterion, model_opt))
-        model.eval()
-        print(run_epoch(data_gen(V, 30, 5), model,
-                        SimpleLossCompute(model.generator, criterion, None)))
+    train_losses = []
+    valid_losses = []
+    best_loss = None
+    try:
+
+        for epoch in range(epochs):
+            print('Starting epoch', epoch)
+            model.train()
+            train_loss = run_epoch(train_loader, model,
+                                   SimpleLossCompute(model.generator, criterion, model_opt))
+            model.eval()
+            valid_loss = run_epoch(valid_loader, model,
+                                   SimpleLossCompute(model.generator, criterion, None))
+
+            train_losses.append(train_loss)
+            valid_losses.append(valid_loss)
+            if not best_loss or valid_loss < best_loss:
+                torch.save(model.state_dict(), os.path.join(model_dir, f'cp_epoch_{epoch}'))
+
+    except KeyboardInterrupt:
+        print('-' * 89)
+        print('Exiting from training early')
