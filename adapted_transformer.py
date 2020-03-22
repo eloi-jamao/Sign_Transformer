@@ -5,8 +5,6 @@ import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
-import os
-#https://nlp.seas.harvard.edu/2018/04/03/attention.html
 
 class EncoderDecoder(nn.Module):
     """
@@ -23,8 +21,7 @@ class EncoderDecoder(nn.Module):
 
     def forward(self, src, tgt, src_mask, tgt_mask):
         "Take in and process masked src and target sequences."
-        return self.decode(self.encode(src, src_mask), src_mask,
-                            tgt, tgt_mask)
+        return self.decode(self.encode(src, src_mask), src_mask, tgt, tgt_mask)
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
@@ -231,7 +228,7 @@ def make_model(src_vocab, tgt_vocab, N=6,
         Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
         Decoder(DecoderLayer(d_model, c(attn), c(attn),
                              c(ff), dropout), N),
-        nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
+        nn.Sequential(c(position)), #Need to change input embedding, i removed Embeddings(d_model, src_vocab),
         nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
         Generator(d_model, tgt_vocab))
 
@@ -244,9 +241,9 @@ def make_model(src_vocab, tgt_vocab, N=6,
 
 class Batch:
     "Object for holding a batch of data with mask during training."
-    def __init__(self, src, trg=None, pad=0):
+    def __init__(self, src, trg=None, pad=3):
         self.src = src
-        self.src_mask = (src != pad).unsqueeze(-2)
+        self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
         if trg is not None:
             self.trg = trg[:, :-1]
             self.trg_y = trg[:, 1:]
@@ -262,25 +259,24 @@ class Batch:
             subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
         return tgt_mask
 
-def run_epoch(data_iter, model, loss_compute, device):
+def run_epoch(data_iter, model, loss_compute):
     "Standard Training and Logging Function"
     start = time.time()
     total_tokens = 0
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        frames, src, trg = batch
+        src, trg = batch
         batch = Batch(src, trg)
-        out = model.forward(batch.src.to(device), batch.trg.to(device),
-                            batch.src_mask.to(device), batch.trg_mask.to(device))
+        out = model.forward(batch.src, batch.trg,
+                            batch.src_mask, batch.trg_mask)
         loss = loss_compute(out, batch.trg_y, batch.ntokens)
         total_loss += loss
         total_tokens += batch.ntokens
         tokens += batch.ntokens
         if i % 50 == 1:
             elapsed = time.time() - start
-            print("Epoch Step: %d Loss: %f Tokens per Sec: %f" %
-                    (i, loss / batch.ntokens, tokens / elapsed))
+            print(f"Epoch Step: {int(i)} Loss: {loss / batch.ntokens} Tokens per Sec: {tokens / elapsed}")
             start = time.time()
             tokens = 0
     return total_loss / total_tokens
@@ -377,6 +373,35 @@ class SimpleLossCompute:
             self.opt.step()
             self.opt.optimizer.zero_grad()
         return loss.item() * norm
+'''
+
+if True:
+    import spacy
+    spacy_de = spacy.load('de_core_news_sm')
+    spacy_en = spacy.load('en_core_web_sm')
+
+    def tokenize_de(text):
+        return [tok.text for tok in spacy_de.tokenizer(text)]
+
+    def tokenize_en(text):
+        return [tok.text for tok in spacy_en.tokenizer(text)]
+
+    BOS_WORD = '<s>'
+    EOS_WORD = '</s>'
+    BLANK_WORD = "<blank>"
+    SRC = data.Field(tokenize=tokenize_de, pad_token=BLANK_WORD)
+    TGT = data.Field(tokenize=tokenize_en, init_token = BOS_WORD,
+                     eos_token = EOS_WORD, pad_token=BLANK_WORD)
+
+    MAX_LEN = 100
+    train, val, test = datasets.IWSLT.splits(
+        exts=('.de', '.en'), fields=(SRC, TGT),
+        filter_pred=lambda x: len(vars(x)['src']) <= MAX_LEN and
+            len(vars(x)['trg']) <= MAX_LEN)
+    MIN_FREQ = 2
+    SRC.build_vocab(train.src, min_freq=MIN_FREQ)
+    TGT.build_vocab(train.trg, min_freq=MIN_FREQ)
+'''
 
 class MyIterator(data.Iterator):
     def create_batches(self):
@@ -403,7 +428,8 @@ def rebatch(pad_idx, batch):
 
 def greedy_decode(model, src, src_mask, max_len, start_symbol):
     memory = model.encode(src, src_mask)
-    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
+    ys = torch.ones(1, 1, dtype=torch.int64).fill_(start_symbol)
+    print(ys.type())
     for i in range(max_len-1):
         out = model.decode(memory, src_mask,
                            Variable(ys),
@@ -413,45 +439,29 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
         _, next_word = torch.max(prob, dim = 1)
         next_word = next_word.data[0]
         ys = torch.cat([ys,
-                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
+                        torch.ones(1, 1, dtype=torch.int64).fill_(next_word)], dim=1)
     return ys
+
 
 if __name__ == '__main__':
 
-    model_dir = './models/G2T' #folder to save the model state
-    src_vocab = 11
-    trg_vocab = 11
-    batch_size = 5
-    epochs = 5
-    N_blocks = 2
-
-    train_loader = data_gen(src_vocab, batch_size, 10)
-    valid_loader = data_gen(src_vocab, batch_size, 10)
-
-    criterion = LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
-    model = make_model(src_vocab, trg_vocab, N=N_blocks, d_model=512, h=8)
+    # Train the simple copy task.
+    V = 11
+    criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
+    model = make_model(V, V, N=1, h=4)
     model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
             torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
-    train_losses = []
-    valid_losses = []
-    best_loss = None
-    try:
+    for epoch in range(6):
+        model.train()
+        run_epoch(data_gen(V, 30, 20), model,
+                  SimpleLossCompute(model.generator, criterion, model_opt), epoch)
+        model.eval()
+        print(run_epoch(data_gen(V, 30, 5), model,
+              SimpleLossCompute(model.generator, criterion, None), epoch))
 
-        for epoch in range(epochs):
-            print('Starting epoch', epoch)
-            model.train()
-            train_loss = run_epoch(train_loader, model,
-                                   SimpleLossCompute(model.generator, criterion, model_opt))
-            model.eval()
-            valid_loss = run_epoch(valid_loader, model,
-                                   SimpleLossCompute(model.generator, criterion, None))
-
-            train_losses.append(train_loss)
-            valid_losses.append(valid_loss)
-            if not best_loss or valid_loss < best_loss:
-                torch.save(model.state_dict(), os.path.join(model_dir, f'cp_epoch_{epoch}'))
-
-    except KeyboardInterrupt:
-        print('-' * 89)
-        print('Exiting from training early')
+    #Testing if it works
+    model.eval()
+    src = Variable(torch.LongTensor([[1,2,3,4,5,6,7,8,9,10]]) )
+    src_mask = Variable(torch.ones(1, 1, 10) )
+    print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
