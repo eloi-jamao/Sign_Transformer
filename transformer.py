@@ -261,17 +261,17 @@ class Batch:
             subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
         return tgt_mask
 
-def run_epoch(data_iter, model, loss_compute):
+def run_epoch(data_iter, model, loss_compute, device):
     "Standard Training and Logging Function"
     start = time.time()
     total_tokens = 0
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        #src, trg = batch
-        #batch = Batch(src, trg)
-        out = model.forward(batch.src, batch.trg,
-                            batch.src_mask, batch.trg_mask)
+        frames, src, trg = batch
+        batch = Batch(src, trg)
+        out = model.forward(batch.src.to(device), batch.trg.to(device),
+                            batch.src_mask.to(device), batch.trg_mask.to(device))
         loss = loss_compute(out, batch.trg_y, batch.ntokens)
         total_loss += loss
         total_tokens += batch.ntokens
@@ -400,6 +400,20 @@ def rebatch(pad_idx, batch):
     src, trg = batch.src.transpose(0, 1), batch.trg.transpose(0, 1)
     return Batch(src, trg, pad_idx)
 
+def greedy_decode(model, src, src_mask, max_len, start_symbol):
+    memory = model.encode(src, src_mask)
+    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
+    for i in range(max_len-1):
+        out = model.decode(memory, src_mask,
+                           Variable(ys),
+                           Variable(subsequent_mask(ys.size(1))
+                                    .type_as(src.data)))
+        prob = model.generator(out[:, -1])
+        _, next_word = torch.max(prob, dim = 1)
+        next_word = next_word.data[0]
+        ys = torch.cat([ys,
+                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
+    return ys
 
 if __name__ == '__main__':
 
