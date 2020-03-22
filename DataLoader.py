@@ -59,7 +59,7 @@ class SNLT_Dataset(Dataset):
                 tok_sent.append(dictionary_.word2idx[word])
             else:
                 tok_sent.append(dictionary_.word2idx[unk])
-        
+
         #now introduce the start and end tokens
         tok_sent.insert(0, dictionary_.word2idx[start])
         tok_sent.append(1) # 1 is the end token
@@ -98,16 +98,16 @@ if __name__ == '__main__':
     test_loader = DataLoader(dataset, batch_size = 1, shuffle = False)
 
     print(len(dataset))
-    
+
     for img_path, gsent, label in dataset:
         print('image_directory ', img_path)
         print('gloss_sentence ', len(gsent), gsent)
         print('label', len(label), label)
         break
-    
-    
+
+
     """
-    - Removed all related with keypoints, saved locally in a Dataloader_old.py script
-    - if gloss flag, output size will be 3, (img_folder, gloss sentence, label sentence), else, output will be (img_folder, label sentence)
-    - todo, create a function flagged to create the vocabulary files when the dataset is instancied 
+    - Removed all related with keypoints, saved locally in a Dataloader_old.py script (not pushed to the repo tho)
+    - if gloss = True, output size will be 3, (img_folder, gloss sentence, label sentence), else, output will be (img_folder, label sentence)
+    - todo, create a function flagged to create the vocabulary files when the dataset is instancied (?????? flagged??)
     """
