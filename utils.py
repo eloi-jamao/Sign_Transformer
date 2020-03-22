@@ -125,11 +125,11 @@ def confidence_stats():
     plt.show()
 
 
-def create_gloss_vocab():
+def create_gloss_vocab(annotation_path = "data/annotations/"):
     vocabulary = []
     token_vocab = {}
     num_tokens=0
-    annotation_path = "data/annotations/"
+
     for csv_file in ["dev.csv", "train.csv", "test.csv"]:
         csv_path = annotation_path + csv_file
         print(csv_path)
@@ -137,7 +137,7 @@ def create_gloss_vocab():
             csv_reader = csv.reader(file, delimiter='|')
             next(csv_reader)
             for row in csv_reader:
-                for gword in row[-2].split():
+                for gword in row[-1].split():
                     num_tokens += 1
                     if gword not in vocabulary:
                         #print(gword)
@@ -161,13 +161,13 @@ def create_gloss_vocab():
 
 
 
-    """
+
     #create a vocabulary file .txt
     vocabulary_file = annotation_path + "gloss_tokens.txt"
     with open(vocabulary_file, "w") as file:
         for gword, reps in list_dict:
-            file.write(gword+ "  "+ str(reps) + "\n")
-    """
+            file.write(gword)
+
 
 
 def compute_coverage(list_vocab, num_tokens):
@@ -182,7 +182,7 @@ def compute_coverage(list_vocab, num_tokens):
 
 if __name__ == '__main__':
 
-    create_gloss_vocab()
+    #create_gloss_vocab()
 
 
 	#features_path = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px"
