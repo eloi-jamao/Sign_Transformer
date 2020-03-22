@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
 parser.add_argument('--epochs', '-e', type=int, default=50, help='upper epoch limit')
 parser.add_argument('-b_size', '-b', type=int, help='batch size')
+parser.add_argument('--checkpoint', '-cp', type=str, default=None, help='checkpoint to load the model')
 args = parser.parse_args()
 
 if torch.cuda.is_available():
@@ -34,6 +35,9 @@ dev_loader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=True, drop_l
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
 model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=512, h=8)
+if args.checkpoint is not None:
+    model.load_state_dict(torch.load(args.checkpoint))
+    print('Loaded state_dict to the model before starting train')
 model.to(device)
 model_opt = tf.NoamOpt(model.src_embed[0].d_model, 1, 400,
                        torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
@@ -62,8 +66,6 @@ try:
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
-except:
-    print('unkown error')
 
 torch.save(train_losses, 'models/G2T/train_losses')
 torch.save(dev_losses, 'models/G2T/dev_losses')
