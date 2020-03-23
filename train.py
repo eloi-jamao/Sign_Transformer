@@ -62,15 +62,13 @@ try:
 
         train_losses.append(train_loss)
         dev_losses.append(dev_loss)
+        
         if not best_loss or (dev_loss < best_loss):
-            if epoch > 30 or (args.checkpoint is not None):
-                torch.save(model.state_dict(), os.path.join(model_dir, f'cp_epoch_{epoch}'))
-        if epoch % 10 == 0:
-            torch.save(train_losses, ('models/G2T/train_losses_ep'+str(epoch)))
-            torch.save(dev_losses, ('models/G2T/dev_losses_ep'+str(epoch)))
+            torch.save(model.state_dict(), os.path.join(model_dir, 'best_model_cp'))
+
+        torch.save(train_losses, 'models/G2T/train_losses')
+        torch.save(dev_losses, 'models/G2T/dev_losses')
+
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
-
-torch.save(train_losses, 'models/G2T/train_losses_final')
-torch.save(dev_losses, 'models/G2T/dev_losses_final')
