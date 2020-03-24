@@ -6,6 +6,7 @@ import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
 import os
+from DataLoader import decode_sentence
 
 class EncoderDecoder(nn.Module):
     """
@@ -406,8 +407,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
     for i in range(max_len-1):
         out = model.decode(memory, src_mask,
                            Variable(ys),
-                           Variable(subsequent_mask(ys.size(1))
-                                    .type_as(src.data)))
+                           Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
         prob = model.generator(out[:, -1])
         _, next_word = torch.max(prob, dim = 1)
         next_word = next_word.data[0]
@@ -415,7 +415,26 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
     return ys
 
+def evaluate_model(model, loader, max_seq, dictionary):
+    with open('./data/pred_corpus.txt', 'w') as file:
+        print('writing evaluation corpus.......')
+        for i,batch in enumerate(loader):
+            frames, src, trg = batch
+            batch = Batch(src, trg)
+            full_pred = greedy_decode(model, batch.src, batch.src_mask, max_len=max_seq, start_symbol=0).squeeze(dim=0)
+            pred = []
+            for index in full_pred:
+                if index == 1:
+                    break
+                else:
+                    pred.append(index)
+            sentence = decode_sentence(pred[1:], dictionary)
+            file.write((' '.join(sentence)+' .\n'))
+        print('Done!')
+
 if __name__ == '__main__':
+    from torch.utils.data import DataLoader
+    import DataLoader as dl
 
     model_dir = './models/G2T' #folder to save the model state
     src_vocab = 11
@@ -432,6 +451,17 @@ if __name__ == '__main__':
     model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
             torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
+    test_dataset = dl.SNLT_Dataset(split='test', gloss = True)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, drop_last=True)
+
+    model.eval()
+    src = Variable(torch.LongTensor([[1,2,3,4,5,6,7,8,9,10]]) )
+    src_mask = Variable(torch.ones(1, 1, 10) )
+    print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
+
+
+
+    '''
     train_losses = []
     valid_losses = []
     best_loss = None
@@ -454,3 +484,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print('-' * 89)
         print('Exiting from training early')
+    '''

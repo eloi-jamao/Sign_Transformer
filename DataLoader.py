@@ -91,7 +91,10 @@ class Dictionary(object):
     def __len__(self):
         return len(self.idx2word)
 
-
+def decode_sentence(index_sentence, dictionary):
+    sentence = [dictionary.idx2word[i] for i in index_sentence]
+    return sentence
+    
 if __name__ == '__main__':
 
     dataset = SNLT_Dataset(split = 'train', gloss = True)
