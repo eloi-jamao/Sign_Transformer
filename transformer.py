@@ -415,13 +415,17 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
     return ys
 
-def evaluate_model(model, loader, max_seq, dictionary):
+def evaluate_model(model, loader, max_seq, dictionary, device):
     with open('./data/pred_corpus.txt', 'w') as file:
         print('writing evaluation corpus.......')
         for i,batch in enumerate(loader):
             frames, src, trg = batch
             batch = Batch(src, trg)
-            full_pred = greedy_decode(model, batch.src, batch.src_mask, max_len=max_seq, start_symbol=0).squeeze(dim=0)
+            full_pred = greedy_decode(model,
+                                      batch.src.to(device),
+                                      batch.src_mask.to(device),
+                                      max_len=max_seq,
+                                      start_symbol=0).squeeze(dim=0)
             pred = []
             for index in full_pred:
                 if index == 1:

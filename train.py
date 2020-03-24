@@ -17,7 +17,7 @@ else:
     device = 'cpu'
 print('Using device for training:', device)
 
-model_dir = './models/G2T' #folder to save the model state
+model_cp = './models/G2T/best_model' #to save the model state
 
 train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
 dev_dataset = DL.SNLT_Dataset(split='dev', gloss = True)
@@ -62,9 +62,9 @@ try:
 
         train_losses.append(train_loss)
         dev_losses.append(dev_loss)
-        
+
         if not best_loss or (dev_loss < best_loss):
-            torch.save(model.state_dict(), os.path.join(model_dir, 'best_model_cp'))
+            torch.save(model.state_dict(), model_cp)
 
         torch.save(train_losses, 'models/G2T/train_losses')
         torch.save(dev_losses, 'models/G2T/dev_losses')
@@ -72,3 +72,13 @@ try:
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
+
+
+model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
+model.eval()
+
+tf.evaluate_model(model,
+                  test_loader,
+                  max_seq = 27,
+                  dictionary = train_dataset.dictionary,
+                  device)
