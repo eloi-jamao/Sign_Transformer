@@ -415,7 +415,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
     return ys
 
-def evaluate_model(model, loader, max_seq, dictionary, device):
+def evaluate_model(model, loader, device, max_seq, dictionary):
     with open('./data/pred_corpus.txt', 'w') as file:
         print('writing evaluation corpus.......')
         for i,batch in enumerate(loader):
