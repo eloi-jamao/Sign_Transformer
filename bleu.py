@@ -106,7 +106,21 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
 
     return bleu, precisions, bp, ratio, translation_length, reference_length
 
+def reference_corpus(loader, dictionary):
+    test_corpus = []
+    for frames, gloss, sentence in loader:
+        sentence.squeeze_(dim=0)
+        sent=[]
+        for i in sentence:
+            if i == 1:
+                break
+            else:
+                sent.append(i)
+        test_corpus.append([dictionary.idx2word[i] for i in sent])
+    return test_corpus
+
 if __name__ == '__main__':
+
     import transformer as tf
     import DataLoader as DL
     import torch
@@ -114,10 +128,11 @@ if __name__ == '__main__':
 
     train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
     test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
-    test_loader = DataLoader(test_dataset, batch_size=1)
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
 
     src_vocab = len(train_dataset.gloss_dictionary.idx2word)
     trg_vocab = len(train_dataset.dictionary.idx2word)
+
     device = 'cpu'
     model_cp = './models/G2T/batch_size_128/best_model'
     N_blocks = 2
@@ -128,15 +143,13 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
     model.eval()
 
-    tf.evaluate_model(model,
-                      test_loader,
-                      device,
-                      max_seq = 27,
-                      dictionary = train_dataset.dictionary)
+    pred_corpus = tf.evaluate_model(model,
+                                    test_loader,
+                                    device,
+                                    max_seq = 27,
+                                    dictionary = train_dataset.dictionary)
 
-    '''
-    ref_corpus = './data/annotations/test_mod.txt'
-    pred_corpus = './data/pred_corpus.txt'
-    results = compute_bleu(ref_corpus, pred_corpus)
+    test_corpus = reference_corpus(test_loader, train_dataset.dictionary)
+
+    results = compute_bleu(test_corpus, pred_corpus)
     print(results[0])
-    '''

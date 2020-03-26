@@ -416,25 +416,26 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
     return ys
 
 def evaluate_model(model, loader, device, max_seq, dictionary):
-    with open('./data/pred_corpus.txt', 'w') as file:
-        print('writing evaluation corpus.......')
-        for i,batch in enumerate(loader):
-            frames, src, trg = batch
-            batch = Batch(src, trg)
-            full_pred = greedy_decode(model,
-                                      batch.src.to(device),
-                                      batch.src_mask.to(device),
-                                      max_len=max_seq,
-                                      start_symbol=0).squeeze(dim=0)
-            pred = []
-            for index in full_pred:
-                if index == 1:
-                    break
-                else:
-                    pred.append(index)
-            sentence = decode_sentence(pred[1:], dictionary)
-            file.write((' '.join(sentence)+' .\n'))
-        print('Done!')
+    token_corpus = []
+    for i,batch in enumerate(loader):
+        frames, src, trg = batch
+        batch = Batch(src, trg)
+        full_pred = greedy_decode(model,
+                                  batch.src.to(device),
+                                  batch.src_mask.to(device),
+                                  max_len=max_seq,
+                                  start_symbol=0).squeeze(dim=0)
+
+        pred = []
+        for index in full_pred:
+            if index == 1:
+                break
+            else:
+                pred.append(index)
+        sentence = decode_sentence(pred[1:], dictionary)
+        token_corpus.append(sentence)
+    return token_corpus
+
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
