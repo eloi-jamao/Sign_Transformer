@@ -88,13 +88,11 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
                                  possible_matches_by_order[i])
             else:
                 precisions[i] = 0.0
-
     if min(precisions) > 0:
         p_log_sum = sum((1. / max_order) * math.log(p) for p in precisions)
         geo_mean = math.exp(p_log_sum)
     else:
         geo_mean = 0
-
     ratio = float(translation_length) / reference_length
 
     if ratio > 1.0:
@@ -116,7 +114,7 @@ def reference_corpus(loader, dictionary):
                 break
             else:
                 sent.append(i)
-        test_corpus.append([dictionary.idx2word[i] for i in sent])
+        test_corpus.append([[dictionary.idx2word[i] for i in sent]])
     return test_corpus
 
 if __name__ == '__main__':
@@ -134,7 +132,7 @@ if __name__ == '__main__':
     trg_vocab = len(train_dataset.dictionary.idx2word)
 
     device = 'cpu'
-    model_cp = './models/G2T/batch_size_128/best_model'
+    model_cp = './models/G2T/batch_size_32/best_model'
     N_blocks = 2
     d_model = 128
     att_heads = 2
@@ -142,6 +140,7 @@ if __name__ == '__main__':
     model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, h= att_heads)
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
     model.eval()
+
 
     pred_corpus = tf.evaluate_model(model,
                                     test_loader,
@@ -151,5 +150,7 @@ if __name__ == '__main__':
 
     test_corpus = reference_corpus(test_loader, train_dataset.dictionary)
 
-    results = compute_bleu(test_corpus, pred_corpus)
-    print(results[0])
+
+    for n in [1,2,3,4]:
+        results = compute_bleu(test_corpus, pred_corpus, max_order = n, smooth=True)
+        print('Bleu score with n_grams =',n, ':',results[0])
