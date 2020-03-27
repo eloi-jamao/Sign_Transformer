@@ -81,13 +81,3 @@ try:
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
-
-
-model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
-model.eval()
-
-tf.evaluate_model(model,
-                  test_loader,
-                  device,
-                  max_seq = 27,
-                  dictionary = train_dataset.dictionary)
