@@ -424,7 +424,7 @@ def evaluate_model(model, loader, device, max_seq, dictionary):
                                   batch.src.to(device),
                                   batch.src_mask.to(device),
                                   max_len=max_seq,
-                                  start_symbol=0).squeeze(dim=0)
+                                  start_symbol=1).squeeze(dim=0)
 
         pred = []
         for index in full_pred:
