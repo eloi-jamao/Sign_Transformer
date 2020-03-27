@@ -428,7 +428,7 @@ def evaluate_model(model, loader, device, max_seq, dictionary):
 
         pred = []
         for index in full_pred:
-            if index == 1:
+            if index == 2:
                 break
             else:
                 pred.append(index)
