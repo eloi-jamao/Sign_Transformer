@@ -12,6 +12,7 @@ parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpo
 parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
+parser.add_argument('-lr', '--learning_rate', type=float, help='number of attention heads per block', default = 0.0)
 args = parser.parse_args()
 
 if torch.cuda.is_available():
@@ -35,6 +36,7 @@ epochs = args.epochs
 N_blocks = args.n_blocks
 d_model = args.d_model
 att_heads = args.att_heads
+lr = args.learning_rate
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 dev_loader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -48,8 +50,8 @@ if args.checkpoint is not None:
     print('Loaded state_dict to the model before starting train')
 
 model.to(device)
-model_opt = tf.NoamOpt(model.src_embed[0].d_model, 1, 400,
-                       torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+model_opt = tf.NoamOpt(model.src_embed[0].d_model, 1, 2000,
+                       torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.98), eps=1e-9))
 
 train_losses = []
 dev_losses = []
@@ -81,13 +83,3 @@ try:
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
-
-
-model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
-model.eval()
-
-tf.evaluate_model(model,
-                  test_loader,
-                  device,
-                  max_seq = 27,
-                  dictionary = train_dataset.dictionary)

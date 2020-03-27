@@ -50,7 +50,7 @@ class SNLT_Dataset(Dataset):
 
     def process_sentence(self, sentence, dictionary_ ):
         #first four words are:
-        start, end, unk, pad = [dictionary_.idx2word[i] for i in range(4)]
+        pad, start, end, unk = [dictionary_.idx2word[i] for i in range(4)]
         tok_sent = []
 
         #tokenization using the dictionary
@@ -94,7 +94,7 @@ class Dictionary(object):
 def decode_sentence(index_sentence, dictionary):
     sentence = [dictionary.idx2word[i] for i in index_sentence]
     return sentence
-    
+
 if __name__ == '__main__':
 
     dataset = SNLT_Dataset(split = 'train', gloss = True)

@@ -1,7 +1,7 @@
+<pad>
 <s>
 </s>
 <unk>
-<pad>
 ab
 abend
 abends
