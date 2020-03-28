@@ -36,43 +36,10 @@ class Seq2Seq(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, x):
+    def forward(self, src, tgt, src_mask, tgt_mask):
         # y = self.resnet(x)
         # y = y.view(y.size(0), -1)
         # y = self.rl(y)
         # # y = self.linear(y)
-        y = self.transformer(x)
+        y = self.transformer(src, tgt, src_mask, tgt_mask)
         return y
-
-# class TransformerOpts(object):
-#     ntoken = None
-#     ninp = None
-#     nhead = None
-#     nhid = None
-#     nlayers = None
-#     vocab_size = None
-#     max_seq = None
-#     dropout = None
-#
-#     def __init__(self, **kwargs):
-#         self.ntoken = kwargs.get('ntoken', None)
-#         self.ninp = kwargs.get('ninp', None)
-#         self.nhead = kwargs.get('nhead', None)
-#         self.nhid = kwargs.get('nhid', None)
-#         self.nlayers = kwargs.get('nlayers', None)
-#         self.vocab_size = kwargs.get('vocab_size', None)
-#         self.max_seq = kwargs.get('max_seq', None)
-#         self.dropout = kwargs.get('dropout', None)
-#
-#
-# class ResnetOpts(object):
-#     n_classes = None
-#     resnet_shortcut = None
-#     sample_size = None
-#     sample_duration = None
-#
-#     def __init__(self, **kwargs):
-#         self.n_classes = kwargs.get('n_classes', None)
-#         self.resnet_shortcut = kwargs.get('resnet_shortcut', None)
-#         self.sample_size = kwargs.get('sample_size', None)
-#         self.sample_duration = kwargs.get('sample_duration', None)

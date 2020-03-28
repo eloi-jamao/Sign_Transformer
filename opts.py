@@ -7,7 +7,10 @@ def parse_opts():
 
     parser.add_argument('--data', type=str, default=os.path.join(os.getcwd(), 'data'),
                         help='location of the data corpus')
-
+    parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--model_cp', type=str, default=os.path.join(os.getcwd(), 'model', 'best_model'), help='to save the model state')
+    parser.add_argument('--train_losses', type=str, default=os.path.join(os.getcwd(), 'model', 'train_losses'))
+    parser.add_argument('--dev_losses', type=str, default=os.path.join(os.getcwd(), 'model', 'dev_losses'))
     # parser.add_argument('--emsize', type=int, default=200,
     #                     help='size of word embeddings')
     # parser.add_argument('--nhid', type=int, default=200,
@@ -51,7 +54,7 @@ def parse_opts():
     #
     # # Transformer params
     parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
-    parser.add_argument('-b', '--b_size', type=int, help='batch size', default=8)
+    parser.add_argument('-b', '--b_size', type=int, help='batch size', default=1)
     parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to load the model')
     parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default=512)
     parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default=6)
