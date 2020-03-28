@@ -110,12 +110,18 @@ def reference_corpus(loader, dictionary):
         sentence.squeeze_(dim=0)
         sent=[]
         for i in sentence:
-            if i == 1:
+            if i == 2:
                 break
             else:
                 sent.append(i)
         test_corpus.append([[dictionary.idx2word[i] for i in sent]])
     return test_corpus
+
+def write_corpus(corpus, path):
+    with open(path, 'w') as f:
+        for line in corpus:
+            line = ' '.join(line)+'.\n'
+            f.write(line)
 
 if __name__ == '__main__':
 
@@ -127,12 +133,13 @@ if __name__ == '__main__':
     train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
     test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
-
+    print(test_dataset[0])
+    '''
     src_vocab = len(train_dataset.gloss_dictionary.idx2word)
     trg_vocab = len(train_dataset.dictionary.idx2word)
 
     device = 'cpu'
-    model_cp = './models/G2T/batch_size_32/best_model'
+    model_cp = './models/G2T/NLL/bs128_NLL/best_model'
     N_blocks = 2
     d_model = 128
     att_heads = 2
@@ -141,16 +148,21 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
     model.eval()
 
-
+    print('Generating corpus with model...')
     pred_corpus = tf.evaluate_model(model,
                                     test_loader,
                                     device,
                                     max_seq = 27,
                                     dictionary = train_dataset.dictionary)
 
+    print('Loading reference corpus...')
     test_corpus = reference_corpus(test_loader, train_dataset.dictionary)
-
 
     for n in [1,2,3,4]:
         results = compute_bleu(test_corpus, pred_corpus, max_order = n, smooth=True)
         print('Bleu score with n_grams =',n, ':',results[0])
+
+
+    file_path = './models/G2T/NLL/bs128_NLL/generated_corpus.txt'
+    write_corpus(pred_corpus, file_path)
+    '''

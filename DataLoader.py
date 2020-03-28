@@ -62,7 +62,7 @@ class SNLT_Dataset(Dataset):
 
         #now introduce the start and end tokens
         tok_sent.insert(0, dictionary_.word2idx[start])
-        tok_sent.append(1) # 1 is the end token
+        tok_sent.append(2) # 2 is the end token
 
         #padding sentence to max_seq
         max_seq = 17 if dictionary_.gloss else 27
