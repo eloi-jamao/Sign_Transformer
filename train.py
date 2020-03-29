@@ -12,7 +12,7 @@ parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpo
 parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
-parser.add_argument('-lr', '--learning_rate', type=float, help='number of attention heads per block', default = 0.0)
+parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
 args = parser.parse_args()
 
 if torch.cuda.is_available():
