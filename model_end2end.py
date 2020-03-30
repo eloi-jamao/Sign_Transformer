@@ -6,8 +6,8 @@ import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
 import os
-from DataLoader import decode_sentence
-from transformer import *
+#from DataLoader import decode_sentence
+#from transformer import *
 
 class EncoderDecoder(nn.Module):
     """
@@ -28,8 +28,12 @@ class EncoderDecoder(nn.Module):
         return self.decode(self.encode(src, src_mask), src_mask,
                             tgt, tgt_mask)
 
-    def encode(self, src, src_mask, ):
+    def encode(self, src, src_mask):
         #return self.encoder(self.src_embed(src), src_mask)
+        features = self.cnn3d(src)
+        print("features size ", features.size())
+        pad_size = self.src_embed.vocab - features.size()
+        padded_features = torch.cat(features, torch.zeros(512, pad_size))
         return self.encoder(self.cnn3d(src))
 
     def decode(self, memory, src_mask, tgt, tgt_mask):
@@ -198,6 +202,7 @@ class Embeddings(nn.Module):
         super(Embeddings, self).__init__()
         self.lut = nn.Embedding(vocab, d_model)
         self.d_model = d_model
+        self.vocab = vocab
 
     def forward(self, x):
         return self.lut(x) * math.sqrt(self.d_model)
@@ -273,6 +278,8 @@ def run_epoch(data_iter, model, loss_compute, device):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
+        print(i)
+        print(batch)
         frames, src, trg = batch
         batch = Batch(src, trg)
         out = model.forward(batch.src.to(device), batch.trg.to(device),
