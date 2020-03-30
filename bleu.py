@@ -114,7 +114,7 @@ def reference_corpus(loader, dictionary):
                 break
             else:
                 sent.append(i)
-        test_corpus.append([[dictionary.idx2word[i] for i in sent]])
+        test_corpus.append([[dictionary.idx2word[i] for i in sent[1:]]])
     return test_corpus
 
 def write_corpus(corpus, path):
@@ -133,8 +133,8 @@ if __name__ == '__main__':
     train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
     test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
-    print(test_dataset[0])
-    '''
+
+
     src_vocab = len(train_dataset.gloss_dictionary.idx2word)
     trg_vocab = len(train_dataset.dictionary.idx2word)
 
@@ -157,6 +157,9 @@ if __name__ == '__main__':
 
     print('Loading reference corpus...')
     test_corpus = reference_corpus(test_loader, train_dataset.dictionary)
+    
+    print('------Example sample-------')
+    print('Reference sentence:\n',test_corpus[0][0],'\nGenerated equivalent:\n',pred_corpus[0])
 
     for n in [1,2,3,4]:
         results = compute_bleu(test_corpus, pred_corpus, max_order = n, smooth=True)
@@ -164,5 +167,4 @@ if __name__ == '__main__':
 
 
     file_path = './models/G2T/NLL/bs128_NLL/generated_corpus.txt'
-    write_corpus(pred_corpus, file_path)
-    '''
+    #write_corpus(pred_corpus, file_path)
