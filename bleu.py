@@ -123,12 +123,33 @@ def write_corpus(corpus, path):
             line = ' '.join(line)+'.\n'
             f.write(line)
 
+def greedy_decode(model, src, src_mask, max_len, start_symbol):
+    memory = model.encode(src, src_mask)
+    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
+    for i in range(max_len-1):
+        out = model.decode(memory, src_mask,
+                           Variable(ys),
+                           Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
+        prob = model.generator(out[:, -1])
+        _, next_word = torch.max(prob, dim = 1)
+        next_word = next_word.data[0]
+        ys = torch.cat([ys,
+                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
+    return ys
+
 if __name__ == '__main__':
 
     import transformer as tf
     import DataLoader as DL
     import torch
     from torch.utils.data import DataLoader
+    import argparse
+    parser = argparse.ArgumentParser(description='Bleu score')
+    parser.add_argument('-m', '--model', type=str, help='path to model file')
+    parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
+    parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
+    parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
+    args = parser.parse_args()
 
     train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
     test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
@@ -139,10 +160,10 @@ if __name__ == '__main__':
     trg_vocab = len(train_dataset.dictionary.idx2word)
 
     device = 'cpu'
-    model_cp = './models/G2T/NLL/bs128_NLL/best_model'
-    N_blocks = 2
-    d_model = 128
-    att_heads = 2
+    model_cp = args.model
+    N_blocks = args.n_blocks
+    d_model = args.d_model
+    att_heads = args.att_heads
 
     model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, h= att_heads)
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
@@ -157,7 +178,7 @@ if __name__ == '__main__':
 
     print('Loading reference corpus...')
     test_corpus = reference_corpus(test_loader, train_dataset.dictionary)
-    
+
     print('------Example sample-------')
     print('Reference sentence:\n',test_corpus[0][0],'\nGenerated equivalent:\n',pred_corpus[0])
 
@@ -168,3 +189,4 @@ if __name__ == '__main__':
 
     file_path = './models/G2T/NLL/bs128_NLL/generated_corpus.txt'
     #write_corpus(pred_corpus, file_path)
+    

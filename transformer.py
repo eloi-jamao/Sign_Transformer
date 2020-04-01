@@ -415,6 +415,31 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
     return ys
 
+def beam_search(model, src, src_mask, max_len, start_symbol, top_k = 2):
+    '''
+    Not implemented
+    '''
+    memory = model.encode(src, src_mask)
+    print(memory.size())
+    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
+    print(ys)
+    sentences=[]
+    for i in range(1):
+        out = model.decode(memory, src_mask,
+                           Variable(ys),
+                           Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
+        prob = model.generator(out[:, -1])
+        print(prob.size())
+        _, next_words = torch.topk(prob, k=top_k, dim=1)
+        print(next_words.size())
+    '''
+        _, next_word = torch.max(prob, dim = 1)
+        next_word = next_word.data[0]
+        ys = torch.cat([ys,
+                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
+    return ys
+    '''
+
 def evaluate_model(model, loader, device, max_seq, dictionary):
     token_corpus = []
     for i,batch in enumerate(loader):
