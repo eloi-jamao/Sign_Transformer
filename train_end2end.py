@@ -38,17 +38,19 @@ sample_duration = args.sample_duration
 sample_size = args.sample_size
 
 video_dir = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test_end2end"
-src_vocab = 142
-trg_vocab = 20
+translation_path = "data/labels.csv"
+src_vocab = 142  # dummy value
+trg_vocab = 20  # dummy value
 mean = [114.7748, 107.7354, 99.4750]
 
 spatial_transform = Compose([#Scale(sample_size),#really needed?
-                             #CenterCrop(sample_size),
+                             CenterCrop(sample_size),
                              ToTensor(),
                              Normalize(mean, [1, 1, 1])])
 temporal_transform = LoopPadding(sample_duration)
 
-data_train = Video(video_dir, spatial_transform=spatial_transform,
+data_train = Video(video_dir, translation_path,
+                   spatial_transform=spatial_transform,
                    temporal_transform=temporal_transform,
                    sample_duration=sample_duration)
 train_loader = torch.utils.data.DataLoader(

@@ -62,6 +62,7 @@ class BasicBlock(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, block, layers, sample_size, sample_duration, shortcut_type='A', num_classes=400, last_fc=False):
+        self.last_fc = last_fc
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv3d(3, 64, kernel_size=7, stride=(1, 2, 2),

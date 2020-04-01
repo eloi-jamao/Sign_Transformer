@@ -5,6 +5,7 @@ import os
 import functools
 import copy
 import csv
+from DataLoader import Dictionary, process_sentence
 
 
 def pil_loader(path):
@@ -55,43 +56,22 @@ def load_annotation_data(data_file_path):
         return {row[0]: row[-1] for row in csv_reader}
 
 
-def get_class_labels(data):
-    class_labels_map = {}
-    index = 0
-    for class_label in data['labels']:
-        class_labels_map[class_label] = index
-        index += 1
-    return class_labels_map
-
-
-def get_video_names_and_annotations(data, subset):
-    video_names = []
-    annotations = []
-
-    for key, value in data['database'].items():
-        this_subset = value['subset']
-        if this_subset == subset:
-            if subset == 'testing':
-                video_names.append('test/{}'.format(key))
-            else:
-                label = value['annotations']['label']
-                video_names.append('{}/{}'.format(label, key))
-                annotations.append(value['annotations'])
-
-    return video_names, annotations
-
-
 # https://github.com/kenshohara/3D-ResNets-PyTorch/blob/master/datasets/kinetics.py
 def make_dataset(root_path, annotation_path,
                  #n_samples_for_each_video,
-                 sample_duration):
+                 sample_duration,
+                 dictionary):
     video2text = load_annotation_data(annotation_path)
 
     dataset = []
     i = 0
-    for video, text in video2text.items():
+    dataset_size = len(os.listdir(root_path))
+    for i, video in enumerate(os.listdir(root_path)):
+        if video == ".DS_Store":
+            continue
+
         if i % 1000 == 0:
-            print('dataset loading [{}/{}]'.format(i, len(video2text)))
+            print('dataset loading [{}/{}]'.format(i, dataset_size))
 
         video_path = os.path.join(root_path, video)
         if not os.path.exists(video_path):
@@ -106,24 +86,16 @@ def make_dataset(root_path, annotation_path,
             'video': video_path,
             'segment': [begin_t, end_t],
             'n_frames': n_frames,
-            'text': text  # change to index
+            'label': process_sentence(video2text[video], dictionary)
         }
 
-        if n_samples_for_each_video > 1:
-            step = max(1,
-                       math.ceil((n_frames - 1 - sample_duration) /
-                                 (n_samples_for_each_video - 1)))
-        else:
-            step = sample_duration
+        step = sample_duration
         for j in range(1, n_frames, step):
             sample_j = copy.deepcopy(sample)
             sample_j['frame_indices'] = list(
                 range(j, min(n_frames + 1, j + sample_duration)))
             dataset.append(sample_j)
-
-        i = i + 1
-
-    return dataset, idx_to_class
+    return dataset
 
 
 def make_dataset_deprecated(video_path, sample_duration):
@@ -157,9 +129,11 @@ class Video(data.Dataset):
                  temporal_transform=None,
                  sample_duration=4,
                  get_loader=get_default_video_loader):
+        self.dictionary = Dictionary()
         self.data = make_dataset(video_path,
-                                 #translation_path,
-                                 sample_duration)
+                                 translation_path,
+                                 sample_duration,
+                                 self.dictionary)
 
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
@@ -170,7 +144,7 @@ class Video(data.Dataset):
         Args:
             index (int): Index
         Returns:
-            tuple: (image, target) where target is class_index of the target class.
+
         """
         path = self.data[index]['video']
 
@@ -183,9 +157,7 @@ class Video(data.Dataset):
             clip = [self.spatial_transform(img) for img in clip]
         clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
 
-        target = self.data[index]['segment']  # should return translation
-
-        return clip, target
+        return clip, self.data[index]['label']
 
     def __len__(self):
         return len(self.data)

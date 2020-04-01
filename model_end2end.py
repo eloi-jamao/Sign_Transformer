@@ -14,7 +14,7 @@ class EncoderDecoder(nn.Module):
     A standard Encoder-Decoder architecture. Base for this and many
     other models.
     """
-    def __init__(self, encoder, decoder, src_embed, tgt_embed, generator, cnn3d):
+    def __init__(self, encoder, decoder, src_embed, tgt_embed, generator, cnn3d, src_vocab):
         super(EncoderDecoder, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
@@ -22,6 +22,7 @@ class EncoderDecoder(nn.Module):
         self.tgt_embed = tgt_embed
         self.generator = generator
         self.cnn3d = cnn3d
+        self.src_vocab = src_vocab
 
     def forward(self, src, tgt, src_mask, tgt_mask):
         "Take in and process masked src and target sequences."
@@ -31,10 +32,9 @@ class EncoderDecoder(nn.Module):
     def encode(self, src, src_mask):
         #return self.encoder(self.src_embed(src), src_mask)
         features = self.cnn3d(src)
-        print("features size ", features.size())
-        pad_size = self.src_embed.vocab - features.size()
-        padded_features = torch.cat(features, torch.zeros(512, pad_size))
-        return self.encoder(self.cnn3d(src))
+        pad_size = self.src_vocab - features.size()[0]
+        padded_features = torch.cat((features, torch.zeros(pad_size, 512)))
+        return self.encoder(padded_features)
 
     def decode(self, memory, src_mask, tgt, tgt_mask):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
@@ -242,7 +242,7 @@ def make_model(cnn3d, src_vocab, tgt_vocab, N=6,
         nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
         nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
         Generator(d_model, tgt_vocab),
-        cnn3d)
+        cnn3d, src_vocab)
 
     # This was important from their code.
     # Initialize parameters with Glorot / fan_avg.
@@ -278,9 +278,7 @@ def run_epoch(data_iter, model, loss_compute, device):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        print(i)
-        print(batch)
-        frames, src, trg = batch
+        src, trg = batch
         batch = Batch(src, trg)
         out = model.forward(batch.src.to(device), batch.trg.to(device),
                             batch.src_mask.to(device), batch.trg_mask.to(device))
@@ -337,6 +335,7 @@ class NoamOpt:
             min(step ** (-0.5), step * self.warmup ** (-1.5)))
 
 def get_std_opt(model):
+    # pending to exclude some layers from training
     return NoamOpt(model.src_embed[0].d_model, 2, 4000,
             torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
