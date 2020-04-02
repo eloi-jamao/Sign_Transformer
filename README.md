@@ -3,6 +3,7 @@
 Our work is based on the results and dataset from the [Neural Sign Language Translation](https://www-i6.informatik.rwth-aachen.de/publications/download/1064/CamgozCihanHadfieldSimonKollerOscarNeyHermannBowdenRichard--NeuralSignLanguageTranslation--2018.pdf)
 
 The code used was an adapted version of the [Annotated Transformer](https://nlp.seas.harvard.edu/2018/04/03/attention.html) from Harvard NLP:
+
 '''
 @inproceedings{opennmt,
   author    = {Guillaume Klein and
