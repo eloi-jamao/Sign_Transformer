@@ -5,6 +5,9 @@ import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
+from torchvision.models.video import r2plus1d_18
+import torchvision.transforms as transforms
+from PIL import Image
 
 class EncoderDecoder(nn.Module):
     """
@@ -13,6 +16,8 @@ class EncoderDecoder(nn.Module):
     """
     def __init__(self, encoder, decoder, src_embed, tgt_embed, generator):
         super(EncoderDecoder, self).__init__()
+        self.convnet = nn.Sequential(*list(r2plus1d_18(pretrained=True).children())[:-1])
+        self.intermediate = nn.Linear(512,128)
         self.encoder = encoder
         self.decoder = decoder
         self.src_embed = src_embed
@@ -21,7 +26,10 @@ class EncoderDecoder(nn.Module):
 
     def forward(self, src, tgt, src_mask, tgt_mask):
         "Take in and process masked src and target sequences."
-        return self.decode(self.encode(src, src_mask), src_mask, tgt, tgt_mask)
+        src = self.convnet(src)
+        src = torch.reshape(src, (src.size()[0],512))
+        features = self.intermediate(src).unsqueeze(dim=0)
+        return self.decode(self.encode(features, src_mask), src_mask, tgt, tgt_mask)
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
@@ -243,7 +251,8 @@ class Batch:
     "Object for holding a batch of data with mask during training."
     def __init__(self, src, trg=None, pad=3):
         self.src = src
-        self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
+        self.src_mask = None
+        #self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
         if trg is not None:
             self.trg = trg[:, :-1]
             self.trg_y = trg[:, 1:]
@@ -259,6 +268,8 @@ class Batch:
             subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
         return tgt_mask
 
+transforms = transforms.Compose()
+
 def run_epoch(data_iter, model, loss_compute):
     "Standard Training and Logging Function"
     start = time.time()
@@ -266,7 +277,8 @@ def run_epoch(data_iter, model, loss_compute):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        src, trg = batch
+        img_path, gloss, trg = batch
+        img = Image(img_path)
         batch = Batch(src, trg)
         out = model.forward(batch.src, batch.trg,
                             batch.src_mask, batch.trg_mask)
@@ -373,35 +385,6 @@ class SimpleLossCompute:
             self.opt.step()
             self.opt.optimizer.zero_grad()
         return loss.item() * norm
-'''
-
-if True:
-    import spacy
-    spacy_de = spacy.load('de_core_news_sm')
-    spacy_en = spacy.load('en_core_web_sm')
-
-    def tokenize_de(text):
-        return [tok.text for tok in spacy_de.tokenizer(text)]
-
-    def tokenize_en(text):
-        return [tok.text for tok in spacy_en.tokenizer(text)]
-
-    BOS_WORD = '<s>'
-    EOS_WORD = '</s>'
-    BLANK_WORD = "<blank>"
-    SRC = data.Field(tokenize=tokenize_de, pad_token=BLANK_WORD)
-    TGT = data.Field(tokenize=tokenize_en, init_token = BOS_WORD,
-                     eos_token = EOS_WORD, pad_token=BLANK_WORD)
-
-    MAX_LEN = 100
-    train, val, test = datasets.IWSLT.splits(
-        exts=('.de', '.en'), fields=(SRC, TGT),
-        filter_pred=lambda x: len(vars(x)['src']) <= MAX_LEN and
-            len(vars(x)['trg']) <= MAX_LEN)
-    MIN_FREQ = 2
-    SRC.build_vocab(train.src, min_freq=MIN_FREQ)
-    TGT.build_vocab(train.trg, min_freq=MIN_FREQ)
-'''
 
 class MyIterator(data.Iterator):
     def create_batches(self):

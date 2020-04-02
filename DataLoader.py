@@ -98,14 +98,17 @@ def decode_sentence(index_sentence, dictionary):
 if __name__ == '__main__':
 
     dataset = SNLT_Dataset(split = 'train', gloss = True)
-    test_loader = DataLoader(dataset, batch_size = 1, shuffle = False)
+    train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     print(len(dataset))
 
-    for img_path, gsent, label in dataset:
+    for img_path, gsent, label in train_loader:
+
         print('image_directory ', img_path)
+        '''
         print('gloss_sentence ', len(gsent), gsent)
         print('label', len(label), label)
+        '''
         break
 
 

@@ -147,6 +147,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Bleu score')
     parser.add_argument('-m', '--model', type=str, help='path to model file')
     parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
+    parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default = 2048)
     parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
     parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
     args = parser.parse_args()
@@ -163,9 +164,10 @@ if __name__ == '__main__':
     model_cp = args.model
     N_blocks = args.n_blocks
     d_model = args.d_model
+    d_ff = args.d_ff
     att_heads = args.att_heads
 
-    model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, h= att_heads)
+    model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, d_ff=d_ff, h= att_heads)
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
     model.eval()
 
@@ -189,4 +191,3 @@ if __name__ == '__main__':
 
     file_path = './models/G2T/NLL/bs128_NLL/generated_corpus.txt'
     #write_corpus(pred_corpus, file_path)
-    

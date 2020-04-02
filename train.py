@@ -6,14 +6,22 @@ import torch
 from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
+parser.add_argument('-e2e', '-end2end', action='store_false', help = 'Train end to end model')
 parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
 parser.add_argument('-b', '--b_size', type=int, help='batch size', required = True)
 parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to load the model')
 parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
+parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default = 2048)
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
 args = parser.parse_args()
+
+if args.end2end:
+    import adapted_transformer as tf
+    print('Training end to end model')
+else:
+    import transformer as tf
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -35,6 +43,7 @@ batch_size = args.b_size
 epochs = args.epochs
 N_blocks = args.n_blocks
 d_model = args.d_model
+d_ff = args.d_ff
 att_heads = args.att_heads
 lr = args.learning_rate
 
@@ -43,7 +52,7 @@ dev_loader = DataLoader(dev_dataset, batch_size=batch_size, shuffle=True, drop_l
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, drop_last=True)
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
-model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, h= att_heads)
+model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, d_ff=d_ff, h=att_heads)
 
 if args.checkpoint is not None:
     model.load_state_dict(torch.load(args.checkpoint))
