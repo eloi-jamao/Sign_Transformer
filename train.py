@@ -19,9 +19,17 @@ args = parser.parse_args()
 
 if args.end2end:
     import adapted_transformer as tf
+
+    train_dataset = DL.SNLT_Dataset(split='train', gloss = False)
+    dev_dataset = DL.SNLT_Dataset(split='dev', gloss = False)
+    test_dataset = DL.SNLT_Dataset(split='test', gloss = False)
+
     print('Training end to end model')
 else:
     import transformer as tf
+    train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
+    dev_dataset = DL.SNLT_Dataset(split='dev', gloss = True)
+    test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -30,10 +38,6 @@ else:
 print('Using device for training:', device)
 
 model_cp = './models/G2T/best_model' #to save the model state
-
-train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
-dev_dataset = DL.SNLT_Dataset(split='dev', gloss = True)
-test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
 
 src_vocab = len(train_dataset.gloss_dictionary.idx2word)
 trg_vocab = len(train_dataset.dictionary.idx2word)

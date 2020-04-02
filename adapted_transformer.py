@@ -277,7 +277,7 @@ def run_epoch(data_iter, model, loss_compute):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        img_path, gloss, trg = batch
+        img_path, trg = batch
         src = torch.load(img_path)
         batch = Batch(src, trg)
         out = model.forward(batch.src, batch.trg,
