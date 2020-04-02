@@ -4,7 +4,7 @@ Our work is based on the results and dataset from the [Neural Sign Language Tran
 
 The code used was an adapted version of the [Annotated Transformer](https://nlp.seas.harvard.edu/2018/04/03/attention.html) from Harvard NLP:
 
-'''
+```
 @inproceedings{opennmt,
   author    = {Guillaume Klein and
                Yoon Kim and
@@ -17,7 +17,7 @@ The code used was an adapted version of the [Annotated Transformer](https://nlp.
   url       = {https://doi.org/10.18653/v1/P17-4012},
   doi       = {10.18653/v1/P17-4012}
 }
-'''
+```
 
 ## Requirements
 - Python 3+
@@ -29,22 +29,22 @@ The code used was an adapted version of the [Annotated Transformer](https://nlp.
 
 ### G2T: Training gloss to text model  
 
-'''python
+```python
 python3 train.py -b 32 -dm 128 -df 512 -n 2 -at 8
-'''
+```
 ### E2E: Training end to end model 
 
-'''python
+```python
 python3 train.py -b 32 -dm 128 -df 512 -n 2 -at 8 -e2e
-'''
+```
 
 ### Evaluation
 
 To evaluate the models we use bleu.py, that scores BLEU with n grams from 1 to 4
 
-'''python
+```python
 python3 bleu.py -m model_path -args_with_model_size
-'''
+```
 
 #### Coded by
 - Eloi Marimon Rollant
