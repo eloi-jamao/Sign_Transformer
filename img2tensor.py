@@ -14,6 +14,8 @@ if torch.cuda.is_available():
 else:
     device = 'cpu'
 
+print('using device:',device)
+
 transform = transforms.Compose([transforms.Resize((112,112)),
                                 transforms.ToTensor(),
                                 transforms.Normalize(mean=[0.537,0.527,0.520],

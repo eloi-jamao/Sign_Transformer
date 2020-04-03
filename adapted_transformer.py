@@ -268,9 +268,8 @@ class Batch:
             subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
         return tgt_mask
 
-transforms = transforms.Compose()
 
-def run_epoch(data_iter, model, loss_compute):
+def run_epoch(data_iter, model, loss_compute, device):
     "Standard Training and Logging Function"
     start = time.time()
     total_tokens = 0
@@ -280,9 +279,9 @@ def run_epoch(data_iter, model, loss_compute):
         img_path, trg = batch
         src = torch.load(img_path)
         batch = Batch(src, trg)
-        out = model.forward(batch.src, batch.trg,
-                            batch.src_mask, batch.trg_mask)
-        loss = loss_compute(out, batch.trg_y, batch.ntokens)
+        out = model.forward(batch.src.to(device), batch.trg.to(device),
+                            batch.src_mask, batch.trg_mask.to(device))
+        loss = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
         total_loss += loss
         total_tokens += batch.ntokens
         tokens += batch.ntokens
@@ -428,23 +427,17 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 
 if __name__ == '__main__':
 
-    # Train the simple copy task.
-    V = 11
-    criterion = LabelSmoothing(size=V, padding_idx=0, smoothing=0.0)
-    model = make_model(V, V, N=1, h=4)
-    model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
-            torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+    src = torch.load('data/tensors/images')
+    trg = torch.randint(9,(1,15))
+    device = 'cuda'
+    criterion = LabelSmoothing(size=10, padding_idx=0, smoothing=0.0)
+    model = make_model(128, 10, N=2, d_model=128, d_ff = 512, h=8)
+    model.to(device)
+    loss_compute = SimpleLossCompute(model.generator, criterion, None)
 
-    for epoch in range(6):
-        model.train()
-        run_epoch(data_gen(V, 30, 20), model,
-                  SimpleLossCompute(model.generator, criterion, model_opt), epoch)
-        model.eval()
-        print(run_epoch(data_gen(V, 30, 5), model,
-              SimpleLossCompute(model.generator, criterion, None), epoch))
 
-    #Testing if it works
-    model.eval()
-    src = Variable(torch.LongTensor([[1,2,3,4,5,6,7,8,9,10]]) )
-    src_mask = Variable(torch.ones(1, 1, 10) )
-    print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
+    batch = Batch(src, trg)
+    out = model.forward(batch.src.to(device), batch.trg.to(device),
+                        batch.src_mask, batch.trg_mask.to(device))
+    loss = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
+    print(loss)

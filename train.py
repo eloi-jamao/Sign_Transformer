@@ -17,19 +17,10 @@ parser.add_argument('-at', '--att_heads', type=int, help='number of attention he
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
 args = parser.parse_args()
 
-if args.end2end:
-    import adapted_transformer as tf
 
-    train_dataset = DL.SNLT_Dataset(split='train', gloss = False)
-    dev_dataset = DL.SNLT_Dataset(split='dev', gloss = False)
-    test_dataset = DL.SNLT_Dataset(split='test', gloss = False)
-
-    print('Training end to end model')
-else:
-    import transformer as tf
-    train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
-    dev_dataset = DL.SNLT_Dataset(split='dev', gloss = True)
-    test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
+train_dataset = DL.SNLT_Dataset(split='train', gloss = args.end2end)
+dev_dataset = DL.SNLT_Dataset(split='dev', gloss = args.end2end)
+test_dataset = DL.SNLT_Dataset(split='test', gloss = args.end2end)
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -39,9 +30,17 @@ print('Using device for training:', device)
 
 model_cp = './models/G2T/best_model' #to save the model state
 
-src_vocab = len(train_dataset.gloss_dictionary.idx2word)
+if args.end2end:
+    import adapted_transformer as tf
+    src_vocab = 128
+    print('Training end to end model')
+
+else:
+    import transformer as tf
+    print('Training gloss to text model')
+    src_vocab = len(train_dataset.gloss_dictionary.idx2word)
+
 trg_vocab = len(train_dataset.dictionary.idx2word)
-print('Gloss vocab of',src_vocab,'german vocab of',trg_vocab)
 
 batch_size = args.b_size
 epochs = args.epochs
@@ -63,7 +62,7 @@ if args.checkpoint is not None:
     print('Loaded state_dict to the model before starting train')
 
 model.to(device)
-model_opt = tf.NoamOpt(model.src_embed[0].d_model, 1, 2000,
+model_opt = tf.NoamOpt(d_model, 1, 2000,
                        torch.optim.Adam(model.parameters(), lr=lr, betas=(0.9, 0.98), eps=1e-9))
 
 train_losses = []
