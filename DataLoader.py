@@ -130,14 +130,14 @@ def decode_sentence(index_sentence, dictionary):
 
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/dataset_tensor/", csv_path = "data/annotations/", gloss = True)
+    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/dataset_tensor/", csv_path = "data/annotations/", gloss = False)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     print(len(dataset))
 
 
 
-    clip, gsent, label = dataset[0]
+    clip, label = dataset[0]
 
     print(clip)
       
