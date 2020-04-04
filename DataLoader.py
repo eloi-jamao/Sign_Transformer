@@ -84,7 +84,7 @@ class SNLT_Dataset(Dataset):
 
         tensors=[]
         for image in image_folder:
-            img = Image.open(os.path.join(path,folder,image))
+            img = Image.open(os.path.join(image_folder,image))
             tensor = self.transform(img).reshape(1,3,1,112,112)
             tensors.append(tensor)
 
@@ -130,7 +130,7 @@ def decode_sentence(index_sentence, dictionary):
 
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/dataset_tensor/dataset_train/", csv_path = "data/annotations/", gloss = True)
+    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/dataset_tensor/", csv_path = "data/annotations/", gloss = True)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     print(len(dataset))
@@ -141,10 +141,6 @@ if __name__ == '__main__':
     clip, gsent, label = next(dataset)
 
     print(clip)
-        '''
-        print('gloss_sentence ', len(gsent), gsent)
-        print('label', len(label), label)
-        '''
-        break
+      
 
 
