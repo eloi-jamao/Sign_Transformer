@@ -39,11 +39,9 @@ sample_size = args.sample_size
 
 video_dir = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test_end2end"
 translation_path = "data/labels.csv"
-src_vocab = 142  # dummy value
-trg_vocab = 20  # dummy value
 mean = [114.7748, 107.7354, 99.4750]
 
-spatial_transform = Compose([#Scale(sample_size),#really needed?
+spatial_transform = Compose([Scale(sample_size),#really needed?
                              CenterCrop(sample_size),
                              ToTensor(),
                              Normalize(mean, [1, 1, 1])])
@@ -53,6 +51,9 @@ data_train = Video(video_dir, translation_path,
                    spatial_transform=spatial_transform,
                    temporal_transform=temporal_transform,
                    sample_duration=sample_duration)
+
+src_vocab = 142  # dummy value, to be computed based on video length distribution
+trg_vocab = len(data_train.dictionary.idx2word)  # dummy value
 train_loader = torch.utils.data.DataLoader(
     data_train, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
 """data_dev = Video(video_dir, spatial_transform=spatial_transform,
@@ -72,6 +73,10 @@ for key, value in model_data['state_dict'].items():
     key = key.replace("module.", "")
     state_dict[key] = value
 cnn3d.load_state_dict(state_dict)
+for i, child in enumerate(cnn3d.children()):
+    if i < 7 or i == 9:
+        for p in child.parameters():
+            p.requires_grad = False
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
 model = tf.make_model(cnn3d, src_vocab, trg_vocab, N=N_blocks, d_model=d_model, h=att_heads)
