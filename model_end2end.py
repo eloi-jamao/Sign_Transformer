@@ -31,10 +31,19 @@ class EncoderDecoder(nn.Module):
 
     def encode(self, src, src_mask):
         #return self.encoder(self.src_embed(src), src_mask)
-        features = self.cnn3d(src)
+        video_features = []
+        for s in src:
+            clip_features = self.cnn3d(s)
+            video_features.append(clip_features)
+        #print("clip_features", clip_features.size())
+        #print("video_features", len(video_features))
+        features = torch.cat(video_features)
+        return self.encoder(features, src_mask)
+        """print("features", features.size())
         pad_size = self.src_vocab - features.size()[0]
         padded_features = torch.cat((features, torch.zeros(pad_size, 512)))
-        return self.encoder(padded_features)
+        print(padded_features.size())
+        return self.encoder(padded_features, src_mask)"""
 
     def decode(self, memory, src_mask, tgt, tgt_mask):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
@@ -239,7 +248,7 @@ def make_model(cnn3d, src_vocab, tgt_vocab, N=6,
         Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
         Decoder(DecoderLayer(d_model, c(attn), c(attn),
                              c(ff), dropout), N),
-        nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
+        nn.Sequential(c(position)),
         nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
         Generator(d_model, tgt_vocab),
         cnn3d, src_vocab)
@@ -247,7 +256,7 @@ def make_model(cnn3d, src_vocab, tgt_vocab, N=6,
     # This was important from their code.
     # Initialize parameters with Glorot / fan_avg.
     for p in model.parameters():
-        if p.dim() > 1:
+        if p.requires_grad and p.dim() > 1:
             nn.init.xavier_uniform_(p)
     return model
 
@@ -255,7 +264,7 @@ class Batch:
     "Object for holding a batch of data with mask during training."
     def __init__(self, src, trg=None, pad=0):
         self.src = src
-        self.src_mask = (src != pad).unsqueeze(-2)
+        self.src_mask = None#torch.cat(torch.ones(len(src)))
         if trg is not None:
             self.trg = trg[:, :-1]
             self.trg_y = trg[:, 1:]
@@ -280,8 +289,9 @@ def run_epoch(data_iter, model, loss_compute, device):
     for i, batch in enumerate(data_iter):
         src, trg = batch
         batch = Batch(src, trg)
-        out = model.forward(batch.src.to(device), batch.trg.to(device),
-                            batch.src_mask.to(device), batch.trg_mask.to(device))
+        out = model.forward(batch.src, batch.trg,
+                            batch.src_mask,#.to(device),
+                            batch.trg_mask.to(device))
         loss = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
         total_loss += loss
         total_tokens += batch.ntokens

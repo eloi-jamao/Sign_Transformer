@@ -70,6 +70,29 @@ class SNLT_Dataset(Dataset):
 
         return torch.LongTensor(tok_sent)
 
+def process_sentence(sentence, dictionary_):
+    #first four words are:
+    start, end, unk, pad = [dictionary_.idx2word[i] for i in range(4)]
+    tok_sent = []
+
+    #tokenization using the dictionary
+    for word in sentence.split():
+        if word in dictionary_.idx2word:
+            tok_sent.append(dictionary_.word2idx[word])
+        else:
+            tok_sent.append(dictionary_.word2idx[unk])
+
+    #now introduce the start and end tokens
+    tok_sent.insert(0, dictionary_.word2idx[start])
+    tok_sent.append(1) # 1 is the end token
+
+    #padding sentence to max_seq
+    max_seq = 17 if dictionary_.gloss else 27
+    for i in range(max_seq - len(tok_sent)):
+        tok_sent.append(dictionary_.word2idx[pad])
+
+    return torch.LongTensor(tok_sent)
+
 class Dictionary(object):
     def __init__(self, vocab_path='data/vocabulary.txt', gloss = False):
 
