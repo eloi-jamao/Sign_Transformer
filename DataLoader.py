@@ -135,10 +135,9 @@ if __name__ == '__main__':
 
     print(len(dataset))
 
-    it = iter(dataset)
 
 
-    clip, gsent, label = next(dataset)
+    clip, gsent, label = dataset[0]
 
     print(clip)
       
