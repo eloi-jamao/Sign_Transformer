@@ -90,11 +90,13 @@ def make_dataset(root_path, annotation_path,
         }
 
         step = sample_duration
+        video_sample = []
         for j in range(1, n_frames, step):
             sample_j = copy.deepcopy(sample)
             sample_j['frame_indices'] = list(
                 range(j, min(n_frames + 1, j + sample_duration)))
-            dataset.append(sample_j)
+            video_sample.append(sample_j)
+        dataset.append(video_sample)
     return dataset
 
 
@@ -144,20 +146,28 @@ class Video(data.Dataset):
         Args:
             index (int): Index
         Returns:
-
+            tuple
+                list of clips, label
+                where each clip is a tensor of shape
+                (3,window_size,img_size,img_size)
+                and label is an output sequence
         """
-        path = self.data[index]['video']
+        path = self.data[index][0]['video']
+        video = []
 
-        frame_indices = self.data[index]['frame_indices']
-        if self.temporal_transform is not None:
-            frame_indices = self.temporal_transform(frame_indices)
-        clip = self.loader(path, frame_indices)
-        if self.spatial_transform is not None:
-            #self.spatial_transform.randomize_parameters()
-            clip = [self.spatial_transform(img) for img in clip]
-        clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
+        for segment in self.data[index]:
+            frame_indices = segment['frame_indices']
+            if self.temporal_transform is not None:
+                frame_indices = self.temporal_transform(frame_indices)
+            clip = self.loader(path, frame_indices)
+            if self.spatial_transform is not None:
+                #self.spatial_transform.randomize_parameters()
+                clip = [self.spatial_transform(img) for img in clip]
+            clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
+            #print("clip", clip.size())
+            video.append(clip)
 
-        return clip, self.data[index]['label']
+        return video, self.data[index][0]['label']
 
     def __len__(self):
         return len(self.data)
