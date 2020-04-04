@@ -53,7 +53,7 @@ class SNLT_Dataset(Dataset):
             gloss_sent = self.process_sentence(self.samples[idx][1], self.gloss_dictionary)
             return (img_fold, gloss_sent, label)
         else:
-            return (make_clip(img_fold), label)
+            return (make_clips(img_fold), label)
 
 
     def process_sentence(self, sentence, dictionary_ ):
