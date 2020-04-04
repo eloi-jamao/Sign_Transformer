@@ -9,6 +9,7 @@ from spatial_transforms import (Compose, Normalize, Scale, CenterCrop, ToTensor)
 from temporal_transforms import LoopPadding
 import model_end2end as tf
 from resnet3d import resnet34
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
 parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
@@ -19,7 +20,7 @@ parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
 parser.add_argument('-lr', '--learning_rate', type=float, help='number of attention heads per block', default = 0.0)
 parser.add_argument('-d', '--sample_duration', type=float, help='sample duration', default = 4)
-parser.add_argument('-s', '--sample_size', type=float, help='sample duration', default = 210)
+parser.add_argument('-s', '--sample_size', type=float, help='sample duration', default = 128)
 args = parser.parse_args()
 
 if torch.cuda.is_available():
@@ -37,8 +38,8 @@ lr = args.learning_rate
 sample_duration = args.sample_duration
 sample_size = args.sample_size
 
-video_dir = "data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/test_end2end"
-translation_path = "data/labels.csv"
+root_dir = "data"
+model_dir = "model"
 mean = [114.7748, 107.7354, 99.4750]
 
 spatial_transform = Compose([Scale(sample_size),#really needed?
@@ -47,7 +48,8 @@ spatial_transform = Compose([Scale(sample_size),#really needed?
                              Normalize(mean, [1, 1, 1])])
 temporal_transform = LoopPadding(sample_duration)
 
-data_train = Video(video_dir, translation_path,
+data_train = Video(os.path.join(root_dir, "train"),
+                   os.path.join(root_dir, "annotations_train.csv"),
                    spatial_transform=spatial_transform,
                    temporal_transform=temporal_transform,
                    sample_duration=sample_duration)
@@ -55,12 +57,17 @@ data_train = Video(video_dir, translation_path,
 src_vocab = 142  # dummy value, to be computed based on video length distribution
 trg_vocab = len(data_train.dictionary.idx2word)  # dummy value
 train_loader = torch.utils.data.DataLoader(
-    data_train, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-"""data_dev = Video(video_dir, spatial_transform=spatial_transform,
+    data_train, batch_size=batch_size, shuffle=True)
+
+
+data_dev = Video(os.path.join(root_dir, "dev"),
+                 os.path.join(root_dir, "annotations_dev.csv"),
+                 spatial_transform=spatial_transform,
                  temporal_transform=temporal_transform,
                  sample_duration=sample_duration)
-data_loader_dev = torch.utils.data.DataLoader(
-    data_dev, batch_size=batch_size, shuffle=False, num_workers=n_threads, pin_memory=True)"""
+
+dev_loader = torch.utils.data.DataLoader(
+    data_dev, batch_size=batch_size, shuffle=False)
 
 # load pretrained model
 cnn3d = resnet34(sample_size=sample_size,
@@ -103,7 +110,6 @@ try:
                                   tf.SimpleLossCompute(model.generator, criterion, model_opt),
                                   device)
         print(train_loss)
-        break
         model.eval()
         dev_loss = tf.run_epoch(dev_loader, model,
                                 tf.SimpleLossCompute(model.generator, criterion, None),
@@ -113,11 +119,12 @@ try:
         dev_losses.append(dev_loss)
 
         if not best_loss or (dev_loss < best_loss):
-            torch.save(model.state_dict(), model_cp)
-
-        torch.save(train_losses, 'models/G2T/train_losses')
-        torch.save(dev_losses, 'models/G2T/dev_losses')
-
+            torch.save(model.state_dict(), os.path.join(model_dir, f'cp_epoch_{epoch}'))
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
+torch.save(train_losses, os.path.join(model_dir, "loss/train"))
+torch.save(dev_losses, os.path.join(model_dir, "loss/dev"))
+plt.plot(train_losses, "r")
+plt.plot(dev_losses, "b")
+plt.show()
