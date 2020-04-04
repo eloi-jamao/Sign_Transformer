@@ -15,6 +15,7 @@ class SNLT_Dataset(Dataset):
 
         self.samples = []
         self.gloss = gloss
+
         #Paths
         self.img_dir = frames_path + self.split
         self.csv_path = csv_path
@@ -31,6 +32,11 @@ class SNLT_Dataset(Dataset):
             for row in csv_reader:
                 self.samples.append((row[0], row[-2], row[-1]))
 
+        self.transform = transforms.Compose([transforms.Resize((112,112)),
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=[0.537,0.527,0.520],
+                                                     std=[0.284,0.293,0.324])])
+
 
 
     def __len__(self):
@@ -46,7 +52,8 @@ class SNLT_Dataset(Dataset):
             gloss_sent = self.process_sentence(self.samples[idx][1], self.gloss_dictionary)
             return (img_fold, gloss_sent, label)
         else:
-            return (img_fold, label)
+            return (make_clip(img_fold), label)
+
 
     def process_sentence(self, sentence, dictionary_ ):
         #first four words are:
@@ -70,6 +77,31 @@ class SNLT_Dataset(Dataset):
             tok_sent.append(dictionary_.word2idx[pad])
 
         return torch.LongTensor(tok_sent)
+
+
+    def make_clips(image_folder):
+
+        tensors=[]
+        for image in image_folder:
+            img = Image.open(os.path.join(path,folder,image))
+            tensor = self.transform(img).reshape(1,3,1,112,112)
+            tensors.append(tensor)
+
+        sequence = torch.cat(tensors,dim=2)
+        #print(sequence.shape)
+        sequence = torch.split(sequence,6,dim=2)
+        #print(sequence[0].shape,sequence[1].shape)
+        if sequence[-1].shape[2] < 6:
+            sequenceA = torch.cat(sequence[:-1])
+            #print('A',sequenceA.shape)
+            sequenceB = torch.cat((sequence[-1],torch.zeros((1,3,6-sequence[-1].shape[2],112,112))),dim=2)
+            #print('B',sequenceB.shape)
+            sequence = torch.cat((sequenceA,sequenceB), dim = 0)
+        else:
+            sequence = torch.cat(sequence,dim=0)
+        print(sequence.shape)
+
+        return secuence
 
 class Dictionary(object):
     def __init__(self, vocab_path='data/vocabulary.txt', gloss = False):
@@ -97,14 +129,14 @@ def decode_sentence(index_sentence, dictionary):
 
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(split = 'train', gloss = True)
+    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/dataset_tensor/dataset_train/", csv_path = "data/annotations/", gloss = True)
     train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     print(len(dataset))
 
-    for img_path, gsent, label in train_loader:
+    for clip, gsent, label in train_loader:
 
-        print('image_directory ', img_path)
+        print('image_directory ', clip)
         '''
         print('gloss_sentence ', len(gsent), gsent)
         print('label', len(label), label)
