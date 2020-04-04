@@ -130,13 +130,16 @@ def decode_sentence(index_sentence, dictionary):
 if __name__ == '__main__':
 
     dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/dataset_tensor/dataset_train/", csv_path = "data/annotations/", gloss = True)
-    train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
+    #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     print(len(dataset))
 
-    for clip, gsent, label in train_loader:
+    it = iter(dataset)
 
-        print('image_directory ', clip)
+
+    clip, gsent, label = next(dataset)
+
+    print(clip)
         '''
         print('gloss_sentence ', len(gsent), gsent)
         print('label', len(label), label)
@@ -144,8 +147,3 @@ if __name__ == '__main__':
         break
 
 
-    """
-    - Removed all related with keypoints, saved locally in a Dataloader_old.py script (not pushed to the repo tho)
-    - if gloss = True, output size will be 3, (img_folder, gloss sentence, label sentence), else, output will be (img_folder, label sentence)
-    - todo, create a function flagged to create the vocabulary files when the dataset is instancied (?????? flagged??)
-    """
