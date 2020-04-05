@@ -9,6 +9,11 @@ import os
 #from DataLoader import decode_sentence
 #from transformer import *
 
+if torch.cuda.is_available():
+    device = 'cuda'
+else:
+    device = 'cpu'
+
 class EncoderDecoder(nn.Module):
     """
     A standard Encoder-Decoder architecture. Base for this and many
@@ -33,7 +38,7 @@ class EncoderDecoder(nn.Module):
         #return self.encoder(self.src_embed(src), src_mask)
         video_features = []
         for s in src:
-            clip_features = self.cnn3d(s)
+            clip_features = self.cnn3d(s.to(device))
             video_features.append(clip_features)
         #print("clip_features", clip_features.size())
         #print("video_features", len(video_features))
