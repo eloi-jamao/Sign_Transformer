@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, split, frames_path = "data/frames/", csv_path = "data/annotations/", gloss = False, create_vocabulary = False):
+    def __init__(self, split, frames_path = "data/frames/", csv_path = "data/annotations/", gloss = False, create_vocabulary = False, long_clips = 6, window_clips = 2):
 
         splits = ['train','test','dev']
         self.split = split
@@ -23,8 +23,8 @@ class SNLT_Dataset(Dataset):
         self.csv_file = csv_path + self.split + ".csv"
 
         #Clips
-        self.long_clips = 8
-        self.window_clips = 2
+        self.long_clips = long_clips
+        self.window_clips = window_clips
 
         if self.gloss:
             self.gloss_dictionary = Dictionary(vocab_path='data/gloss_vocabulary.txt', gloss = True)
@@ -91,7 +91,7 @@ class SNLT_Dataset(Dataset):
         tensors=[]
         window_list = []
         i = 0
-        print(len(os.listdir(image_folder)))
+        #print(len(os.listdir(image_folder)))
         for image in os.listdir(image_folder):
             i += 1
             img = Image.open(os.path.join(image_folder,image))
@@ -105,7 +105,7 @@ class SNLT_Dataset(Dataset):
                 window_list = []
                 i = 0
 
-        print(len(tensors))
+        #print(len(tensors))
         sequence = torch.cat(tensors,dim=2)
         #print(sequence.shape)
         sequence = torch.split(sequence, long, dim=2)

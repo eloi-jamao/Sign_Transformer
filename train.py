@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
-parser.add_argument('-e2e', '-end2end', action='store_false', help = 'Train end to end model')
+parser.add_argument('-e2e', '--end2end', action='store_false', help = 'Train end to end model')
 parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
 parser.add_argument('-b', '--b_size', type=int, help='batch size', required = True)
 parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to load the model')
@@ -18,9 +18,9 @@ parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', 
 args = parser.parse_args()
 
 
-train_dataset = DL.SNLT_Dataset(split='train', gloss = args.end2end)
-dev_dataset = DL.SNLT_Dataset(split='dev', gloss = args.end2end)
-test_dataset = DL.SNLT_Dataset(split='test', gloss = args.end2end)
+train_dataset = DL.SNLT_Dataset(split='train',frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/', create_vocabulary = True )
+dev_dataset = DL.SNLT_Dataset(split='dev', frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/', create_vocabulary = True)
+test_dataset = DL.SNLT_Dataset(split='test', frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/',create_vocabulary = True)
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -30,15 +30,15 @@ print('Using device for training:', device)
 
 model_cp = './models/G2T/best_model' #to save the model state
 
-if args.end2end:
-    import adapted_transformer as tf
-    src_vocab = 128
-    print('Training end to end model')
+#if args.end2end:
+import adapted_transformer as tf
+src_vocab = 128
+print('Training end to end model')
 
-else:
-    import transformer as tf
-    print('Training gloss to text model')
-    src_vocab = len(train_dataset.gloss_dictionary.idx2word)
+#else:
+#    import transformer as tf
+#    print('Training gloss to text model')
+#    src_vocab = len(train_dataset.gloss_dictionary.idx2word)
 
 trg_vocab = len(train_dataset.dictionary.idx2word)
 

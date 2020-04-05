@@ -19,13 +19,13 @@ class EncoderDecoder(nn.Module):
         self.convnet = nn.Sequential(*list(r2plus1d_18(pretrained=True).children())[:-1])
 
         #We define which parameters to train
-        for layer in self.convnet:  
+        for layer in self.convnet:
             for param in layer.parameters():
                 param.requires_grad = False
-                
-        for layer in self.convnet[4][1]:
-            for param in layer.parameters():
-                param.requires_grad = True
+
+        #for layer in self.convnet[4][1]:
+        for param in self.convnet[4][1].parameters():
+            param.requires_grad = True
 
         self.intermediate = nn.Linear(512,128)
         self.encoder = encoder
@@ -297,7 +297,7 @@ def run_epoch(data_iter, model, loss_compute, device):
         tokens += batch.ntokens
         if i % 50 == 1:
             elapsed = time.time() - start
-            print(f"Epoch Step: {int(i)} Loss: {loss / batch.ntokens} Tokens per Sec: {tokens / elapsed}")
+            print("Epoch Step: {} Loss: {}".format(int(i), loss/batch.ntokens))  #Tokens per Sec: {tokens / elapsed}")
             start = time.time()
             tokens = 0
     return total_loss / total_tokens
