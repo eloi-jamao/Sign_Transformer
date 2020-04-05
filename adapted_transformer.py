@@ -17,6 +17,16 @@ class EncoderDecoder(nn.Module):
     def __init__(self, encoder, decoder, src_embed, tgt_embed, generator):
         super(EncoderDecoder, self).__init__()
         self.convnet = nn.Sequential(*list(r2plus1d_18(pretrained=True).children())[:-1])
+
+        #We define which parameters to train
+        for layer in self.convnet:  
+            for param in layer.parameters():
+                param.requires_grad = False
+                
+        for layer in self.convnet[4][1]:
+            for param in layer.parameters():
+                param.requires_grad = True
+
         self.intermediate = nn.Linear(512,128)
         self.encoder = encoder
         self.decoder = decoder
@@ -276,8 +286,8 @@ def run_epoch(data_iter, model, loss_compute, device):
     total_loss = 0
     tokens = 0
     for i, batch in enumerate(data_iter):
-        img_path, trg = batch
-        src = torch.load(img_path)
+        src, trg = batch
+        #src = torch.load(img_path)
         batch = Batch(src, trg)
         out = model.forward(batch.src.to(device), batch.trg.to(device),
                             batch.src_mask, batch.trg_mask.to(device))
