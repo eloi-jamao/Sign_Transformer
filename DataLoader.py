@@ -5,9 +5,12 @@ from torchvision.transforms import transforms
 #import utils
 import torch
 from PIL import Image
+import time
+
+
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, split, frames_path = "data/frames/", csv_path = "data/annotations/", gloss = False, create_vocabulary = False, long_clips = 6, window_clips = 2):
+    def __init__(self, split, dev = 'cpu', frames_path = "data/frames/", csv_path = "data/annotations/", gloss = False, create_vocabulary = False, long_clips = 6, window_clips = 2):
 
         splits = ['train','test','dev']
         self.split = split
@@ -16,7 +19,7 @@ class SNLT_Dataset(Dataset):
 
         self.samples = []
         self.gloss = gloss
-
+        self.device = dev
         #Paths
         self.img_dir = frames_path + self.split
         self.csv_path = csv_path
@@ -48,7 +51,6 @@ class SNLT_Dataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-
         img_fold = os.path.join(self.img_dir, self.samples[idx][0],"")
         #print(img_fold, type(img_fold))
 
@@ -95,7 +97,9 @@ class SNLT_Dataset(Dataset):
         for image in os.listdir(image_folder):
             i += 1
             img = Image.open(os.path.join(image_folder,image))
-            tensor = self.transform(img).reshape(1,3,1,112,112)
+            tensor = self.transform(img).reshape(1,3,1,112,112).to(self.device)
+            #tensor.type(dtype=torch.int32)
+
             tensors.append(tensor)
             if long >= i and i > long-window:
                 window_list.append(tensor)
@@ -106,18 +110,18 @@ class SNLT_Dataset(Dataset):
                 i = 0
 
         #print(len(tensors))
-        sequence = torch.cat(tensors,dim=2)
+        sequence = torch.cat(tensors,dim=2).to(self.device)
         #print(sequence.shape)
         sequence = torch.split(sequence, long, dim=2)
         #print(sequence[0].shape,sequence[1].shape)
         if sequence[-1].shape[2] < long:
-            sequenceA = torch.cat(sequence[:-1])
+            sequenceA = torch.cat(sequence[:-1]).to(self.device)
             #print('A',sequenceA.shape)
-            sequenceB = torch.cat((sequence[-1],torch.zeros((1,3,long-sequence[-1].shape[2],112,112))),dim=2)
+            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2,).to(self.device)
             #print('B',sequenceB.shape)
-            sequence = torch.cat((sequenceA,sequenceB), dim = 0)
+            sequence = torch.cat((sequenceA,sequenceB), dim = 0).to(self.device)
         else:
-            sequence = torch.cat(sequence,dim=0)
+            sequence = torch.cat(sequence,dim=0).to(self.device)
         #print(sequence.shape)
 
         return sequence

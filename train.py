@@ -4,6 +4,7 @@ import os
 import DataLoader as DL
 import torch
 from torch.utils.data import DataLoader
+import time
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
 parser.add_argument('-e2e', '--end2end', action='store_false', help = 'Train end to end model')
@@ -17,16 +18,17 @@ parser.add_argument('-at', '--att_heads', type=int, help='number of attention he
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
 args = parser.parse_args()
 
-
-train_dataset = DL.SNLT_Dataset(split='train',frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/', create_vocabulary = True )
-dev_dataset = DL.SNLT_Dataset(split='dev', frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/', create_vocabulary = True)
-test_dataset = DL.SNLT_Dataset(split='test', frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/',create_vocabulary = True)
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 if torch.cuda.is_available():
     device = 'cuda'
 else:
     device = 'cpu'
-print('Using device for training:', device)
+print('Using device for training: ', device)
+
+train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/', create_vocabulary = True )
+dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/', create_vocabulary = True)
+test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = '/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/',create_vocabulary = True)
 
 model_cp = './models/G2T/best_model' #to save the model state
 
@@ -41,6 +43,7 @@ print('Training end to end model')
 #    src_vocab = len(train_dataset.gloss_dictionary.idx2word)
 
 trg_vocab = len(train_dataset.dictionary.idx2word)
+
 
 batch_size = args.b_size
 epochs = args.epochs
@@ -91,6 +94,7 @@ try:
 
         torch.save(train_losses, 'models/G2T/train_losses')
         torch.save(dev_losses, 'models/G2T/dev_losses')
+ 
 
 except KeyboardInterrupt:
     print('-' * 89)

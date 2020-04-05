@@ -1,3 +1,4 @@
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -35,11 +36,13 @@ class EncoderDecoder(nn.Module):
         self.generator = generator
 
     def forward(self, src, tgt, src_mask, tgt_mask):
-        "Take in and process masked src and target sequences."
+        "Take 0 in and process masked src and target sequences."
+        src = src.squeeze(dim = 0)
         src = self.convnet(src)
         src = torch.reshape(src, (src.size()[0],512))
         features = self.intermediate(src).unsqueeze(dim=0)
-        return self.decode(self.encode(features, src_mask), src_mask, tgt, tgt_mask)
+        out = self.decode(self.encode(features, src_mask), src_mask, tgt, tgt_mask)
+        return out
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
@@ -222,8 +225,8 @@ class PositionalEncoding(nn.Module):
 
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) *
+        position = torch.arange(0., max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0., d_model, 2) *
                              -(math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -281,23 +284,23 @@ class Batch:
 
 def run_epoch(data_iter, model, loss_compute, device):
     "Standard Training and Logging Function"
-    start = time.time()
     total_tokens = 0
     total_loss = 0
     tokens = 0
+    start = time.time()
     for i, batch in enumerate(data_iter):
         src, trg = batch
         #src = torch.load(img_path)
         batch = Batch(src, trg)
         out = model.forward(batch.src.to(device), batch.trg.to(device),
                             batch.src_mask, batch.trg_mask.to(device))
-        loss = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
+        loss  = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
         total_loss += loss
         total_tokens += batch.ntokens
         tokens += batch.ntokens
         if i % 50 == 1:
             elapsed = time.time() - start
-            print("Epoch Step: {} Loss: {}".format(int(i), loss/batch.ntokens))  #Tokens per Sec: {tokens / elapsed}")
+            print("Epoch Step: {} Loss: {} Elapsed time: {}".format(int(i), loss/batch.ntokens, elapsed))  #Tokens per Sec: {tokens / elapsed}")
             start = time.time()
             tokens = 0
     return total_loss / total_tokens
