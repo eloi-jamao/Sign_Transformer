@@ -38,7 +38,7 @@ class EncoderDecoder(nn.Module):
     def forward(self, src, tgt, src_mask, tgt_mask):
         "Take 0 in and process masked src and target sequences."
         #src = src.squeeze(dim = 0)
-        src = [self.convnet(x.squeeze(dim = 0)) for x in torch.chunk(src,1,dim=0)]
+        src = [self.convnet(x.squeeze(dim = 0)) for x in torch.split(src,1,dim=0)]
         #print(len(src), src[0].size())
         #src = torch.reshape(src, (src.size()[0],512))
         src = [torch.reshape(x, (1,x.size()[0],512)) for x in src]
