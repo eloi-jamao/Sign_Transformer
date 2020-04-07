@@ -163,6 +163,7 @@ def attention(query, key, value, mask=None, dropout=None):
     scores = torch.matmul(query, key.transpose(-2, -1)) \
              / math.sqrt(d_k)
     if mask is not None:
+        #print(type(scores),scores.size(),mask.size())
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim = -1)
     if dropout is not None:
@@ -269,7 +270,7 @@ class Batch:
     "Object for holding a batch of data with mask during training."
     def __init__(self, src, trg=None, pad=0):
         self.src = src
-        self.src_mask = (torch.sum(src.view(src.size()[0],src.size()[1], -1),dim=-1) != 0)
+        self.src_mask = (torch.sum(src.view(src.size()[0],src.size()[1], -1),dim=-1) != 0).unsqueeze(-2)
         #self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
         if trg is not None:
             self.trg = trg[:, :-1]
@@ -298,7 +299,7 @@ def run_epoch(data_iter, model, loss_compute, device):
         #src = torch.load(img_path)
         batch = Batch(src, trg)
         out = model.forward(batch.src.to(device), batch.trg.to(device),
-                            batch.src_mask, batch.trg_mask.to(device))
+                            batch.src_mask.to(device), batch.trg_mask.to(device))
         loss  = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
         total_loss += loss
         total_tokens += batch.ntokens
