@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import csv
 from torchvision.transforms import transforms
 #import utils
+import torch.nn.functional as F
 import torch
 from PIL import Image
 import time
@@ -10,7 +11,12 @@ import time
 
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, split, dev = 'cpu', frames_path = "data/frames/", csv_path = "data/annotations/", gloss = False, create_vocabulary = False, long_clips = 6, window_clips = 2):
+    def __init__(self, split, dev = 'cpu',
+                 frames_path = "data/frames/",
+                 csv_path = "data/annotations/",
+                 gloss = False,
+                 create_vocabulary = False,
+                 long_clips = 6, window_clips = 2):
 
         splits = ['train','test','dev']
         self.split = split
@@ -88,7 +94,7 @@ class SNLT_Dataset(Dataset):
         return torch.LongTensor(tok_sent)
 
 
-    def make_clips(self, image_folder, long, window):
+    def make_clips(self, image_folder, long, window, max_len = 44):
 
         tensors=[]
         window_list = []
@@ -123,7 +129,7 @@ class SNLT_Dataset(Dataset):
         else:
             sequence = torch.cat(sequence,dim=0).to(self.device)
         #print(sequence.shape)
-
+        sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
         return sequence
 
 class Dictionary(object):
@@ -156,9 +162,15 @@ if __name__ == '__main__':
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     #print(len(dataset))
-
-    clips = []
-    for i in range(len(dataset)):
+    '''
+    for i in range(10):
         clip, label = dataset[i]
-        clips.append(clip.size()[0])
-    print('avg clips:', mean(clips),'std dev:', stdev(clips),'max:',max(clips))
+        print(clip.size())
+    '''
+    loader = DataLoader(dataset, batch_size=5)
+    it = iter(loader)
+    videos, targets = next(it)
+    print(videos.size())
+    mask = (torch.sum(videos.view(videos.size()[0],videos.size()[1], -1),dim=-1) != 0)
+    print(mask.size())
+    print(mask[0])

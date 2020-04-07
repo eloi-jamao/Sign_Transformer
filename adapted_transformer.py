@@ -43,8 +43,6 @@ class EncoderDecoder(nn.Module):
         #src = torch.reshape(src, (src.size()[0],512))
         src = [torch.reshape(x, (1,x.size()[0],512)) for x in src]
         #print(len(src), src[0].size())
-        src = [F.pad(x,(0,0,0,self.len-x.size(1))) for x in src]
-        #print(len(src), src[0].size())
         src = torch.cat(src,dim=0)
         #print(src.size())
         features = self.intermediate(src)
@@ -271,7 +269,7 @@ class Batch:
     "Object for holding a batch of data with mask during training."
     def __init__(self, src, trg=None, pad=0):
         self.src = src
-        self.src_mask = None
+        self.src_mask = (torch.sum(videos.view(videos.size()[0],videos.size()[1], -1),dim=-1) != 0)
         #self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
         if trg is not None:
             self.trg = trg[:, :-1]
