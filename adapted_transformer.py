@@ -262,7 +262,7 @@ def make_model(src_vocab, tgt_vocab, N=6,
 
 class Batch:
     "Object for holding a batch of data with mask during training."
-    def __init__(self, src, trg=None, pad=3):
+    def __init__(self, src, trg=None, pad=0):
         self.src = src
         self.src_mask = None
         #self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
