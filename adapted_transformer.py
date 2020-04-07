@@ -269,7 +269,7 @@ class Batch:
     "Object for holding a batch of data with mask during training."
     def __init__(self, src, trg=None, pad=0):
         self.src = src
-        self.src_mask = (torch.sum(videos.view(videos.size()[0],videos.size()[1], -1),dim=-1) != 0)
+        self.src_mask = (torch.sum(src.view(src.size()[0],src.size()[1], -1),dim=-1) != 0)
         #self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
         if trg is not None:
             self.trg = trg[:, :-1]

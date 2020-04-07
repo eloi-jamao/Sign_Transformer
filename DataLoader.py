@@ -94,7 +94,7 @@ class SNLT_Dataset(Dataset):
         return torch.LongTensor(tok_sent)
 
 
-    def make_clips(self, image_folder, long, window, max_len = 44):
+    def make_clips(self, image_folder, long, window, max_len = 60):
 
         tensors=[]
         window_list = []
