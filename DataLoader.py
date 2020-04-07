@@ -152,16 +152,13 @@ def decode_sentence(index_sentence, dictionary):
 
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/", csv_path = "data/annotations/", gloss = False)
+    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/jamao/Desktop/AIDL/Project/Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/", csv_path = "data/annotations/", gloss = False)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
     #print(len(dataset))
 
-
-    for i in range(10):
+    clips = []
+    for i in range(len(dataset)):
         clip, label = dataset[i]
-        print(clip.size())
-
-
-
-
+        clips.append(clip.size()[0])
+    print('avg clips:', mean(clips),'std dev:', stdev(clips),'max:',max(clips))

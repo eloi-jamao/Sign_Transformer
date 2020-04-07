@@ -27,7 +27,7 @@ class EncoderDecoder(nn.Module):
         #for layer in self.convnet[4][1]:
         for param in self.convnet[4][1].parameters():
             param.requires_grad = True
-
+        self.len = 30
         self.intermediate = nn.Linear(512,128)
         self.encoder = encoder
         self.decoder = decoder
@@ -37,10 +37,17 @@ class EncoderDecoder(nn.Module):
 
     def forward(self, src, tgt, src_mask, tgt_mask):
         "Take 0 in and process masked src and target sequences."
-        src = src.squeeze(dim = 0)
-        src = self.convnet(src)
-        src = torch.reshape(src, (src.size()[0],512))
-        features = self.intermediate(src).unsqueeze(dim=0)
+        #src = src.squeeze(dim = 0)
+        src = [self.convnet(x.squeeze(dim = 0)) for x in torch.chunk(src,1,dim=0)]
+        #print(len(src), src[0].size())
+        #src = torch.reshape(src, (src.size()[0],512))
+        src = [torch.reshape(x, (1,x.size()[0],512)) for x in src]
+        #print(len(src), src[0].size())
+        src = [F.pad(x,(0,0,0,self.len-x.size(1))) for x in src]
+        #print(len(src), src[0].size())
+        src = torch.cat(src,dim=0)
+        #print(src.size())
+        features = self.intermediate(src)
         out = self.decode(self.encode(features, src_mask), src_mask, tgt, tgt_mask)
         return out
 
@@ -437,12 +444,33 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1, dtype=torch.int64).fill_(next_word)], dim=1)
     return ys
 
+def evaluate_model(model, loader, device, max_seq, dictionary):
+    token_corpus = []
+    for i,batch in enumerate(loader):
+        frames, src, trg = batch
+        batch = Batch(src, trg)
+        full_pred = greedy_decode(model,
+                                  batch.src.to(device),
+                                  batch.src_mask.to(device),
+                                  max_len=max_seq,
+                                  start_symbol=1).squeeze(dim=0)
+
+        pred = []
+        for index in full_pred:
+            if index == 2:
+                break
+            else:
+                pred.append(index)
+        sentence = decode_sentence(pred[1:], dictionary)
+        token_corpus.append(sentence)
+    return token_corpus
+
 
 if __name__ == '__main__':
 
     src = torch.load('data/tensors/images')
     trg = torch.randint(9,(1,15))
-    device = 'cuda'
+    device = 'cpu'
     criterion = LabelSmoothing(size=10, padding_idx=0, smoothing=0.0)
     model = make_model(128, 10, N=2, d_model=128, d_ff = 512, h=8)
     model.to(device)
