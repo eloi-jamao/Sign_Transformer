@@ -103,7 +103,7 @@ class SNLT_Dataset(Dataset):
         for image in os.listdir(image_folder):
             i += 1
             img = Image.open(os.path.join(image_folder,image))
-            tensor = self.transform(img).reshape(1,3,1,112,112).to(self.device)
+            tensor = self.transform(img).reshape(1,3,1,112,112)
             #tensor.type(dtype=torch.int32)
 
             tensors.append(tensor)
@@ -116,18 +116,18 @@ class SNLT_Dataset(Dataset):
                 i = 0
 
         #print(len(tensors))
-        sequence = torch.cat(tensors,dim=2).to(self.device)
+        sequence = torch.cat(tensors,dim=2)
         #print(sequence.shape)
         sequence = torch.split(sequence, long, dim=2)
         #print(sequence[0].shape,sequence[1].shape)
         if sequence[-1].shape[2] < long:
-            sequenceA = torch.cat(sequence[:-1]).to(self.device)
+            sequenceA = torch.cat(sequence[:-1])
             #print('A',sequenceA.shape)
-            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2,).to(self.device)
+            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2,)
             #print('B',sequenceB.shape)
-            sequence = torch.cat((sequenceA,sequenceB), dim = 0).to(self.device)
+            sequence = torch.cat((sequenceA,sequenceB), dim = 0)
         else:
-            sequence = torch.cat(sequence,dim=0).to(self.device)
+            sequence = torch.cat(sequence,dim=0)
         #print(sequence.shape)
         sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
         return sequence
