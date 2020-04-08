@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch
 from PIL import Image
 import time
-
+from multiprocessing import Pool
 
 
 class SNLT_Dataset(Dataset):
@@ -100,6 +100,9 @@ class SNLT_Dataset(Dataset):
         window_list = []
         i = 0
         #print(len(os.listdir(image_folder)))
+        with Pool(8) as p:
+            tensors = p.map(self.openimage, [ image for image in os.listdir(image_folder)], tensors)
+            '''
         for image in os.listdir(image_folder):
             i += 1
             img = Image.open(os.path.join(image_folder,image))
@@ -114,7 +117,7 @@ class SNLT_Dataset(Dataset):
                 tensors.extend(window_list)
                 window_list = []
                 i = 0
-
+            '''
         #print(len(tensors))
         sequence = torch.cat(tensors,dim=2)
         #print(sequence.shape)
@@ -131,6 +134,11 @@ class SNLT_Dataset(Dataset):
         #print(sequence.shape)
         sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
         return sequence
+
+    def openimage(self, image, tensors):
+        img = Image.open(os.path.join(image_folder,image))
+        tensor = self.transform(img).reshape(1,3,1,112,112)
+        tensors.append(tensor)
 
 class Dictionary(object):
     def __init__(self, vocab_path='data/vocabulary.txt', gloss = False):
