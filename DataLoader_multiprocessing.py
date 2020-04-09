@@ -178,7 +178,9 @@ def custom_iterator(dataset, batch_size, num_workers = 1, shuff = True):
         with concurrent.futures.ProcessPoolExecutor() as executor:
             samples = executor.map(dataset.__getitem__, indexes)
             samples = [sample for sample in samples]
-        yield samples
+            clips = torch.stack([sample[0] for sample in samples])
+            targets = torch.stack([sample[1] for sample in samples])
+        yield clips, targets
 
         #with Pool(4) as p:
         #    samples = p.map(dataset.__getitem__ , [range()])
@@ -189,11 +191,11 @@ if __name__ == '__main__':
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
 
-    it = iter(custom_iterator(dataset, 32, num_workers = 1))
+    it = iter(custom_iterator(dataset, 3, num_workers = 1))
     start = time.time()
     batch = next(it)
     print(time.time()-start)
-    print(len(batch))
+    src,trg = batch
 
     '''
     start = time.time()

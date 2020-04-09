@@ -100,9 +100,9 @@ class SNLT_Dataset(Dataset):
         window_list = []
         i = 0
         #print(len(os.listdir(image_folder)))
-        with Pool(8) as p:
-            tensors = p.map(self.openimage, [ image for image in os.listdir(image_folder)], tensors)
-            '''
+        #with Pool(8) as p:
+            #tensors = p.map(self.openimage, [ image for image in os.listdir(image_folder)], tensors)
+
         for image in os.listdir(image_folder):
             i += 1
             img = Image.open(os.path.join(image_folder,image))
@@ -117,7 +117,7 @@ class SNLT_Dataset(Dataset):
                 tensors.extend(window_list)
                 window_list = []
                 i = 0
-            '''
+
         #print(len(tensors))
         sequence = torch.cat(tensors,dim=2)
         #print(sequence.shape)
@@ -126,7 +126,7 @@ class SNLT_Dataset(Dataset):
         if sequence[-1].shape[2] < long:
             sequenceA = torch.cat(sequence[:-1])
             #print('A',sequenceA.shape)
-            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2,)
+            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2)
             #print('B',sequenceB.shape)
             sequence = torch.cat((sequenceA,sequenceB), dim = 0)
         else:
@@ -175,10 +175,12 @@ if __name__ == '__main__':
         clip, label = dataset[i]
         print(clip.size())
     '''
-    loader = DataLoader(dataset, batch_size=5)
-    it = iter(loader)
-    videos, targets = next(it)
-    print(videos.size())
-    mask = (torch.sum(videos.view(videos.size()[0],videos.size()[1], -1),dim=-1) != 0)
-    print(mask.size())
-    print(mask[0])
+    start = time.time()
+    sequence = dataset.make_clips('data/frames/images', long = 6, window = 2, max_len = 2)
+    print(type(sequence),sequence.size())
+    print('time loading images',time.time()-start)
+
+    start = time.time()
+    sequence = torch.load('data/tensors/images')
+    print(type(sequence), sequence.size())
+    print('time loading tensor',time.time()-start)
