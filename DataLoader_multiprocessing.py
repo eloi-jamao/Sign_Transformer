@@ -2,13 +2,13 @@ import os
 from torch.utils.data import Dataset, DataLoader
 import csv
 from torchvision.transforms import transforms
-#import utils
 import torch.nn.functional as F
 import torch
 from PIL import Image
 import time
 from multiprocessing import Pool
-
+from random import shuffle
+import concurrent.futures
 
 class SNLT_Dataset(Dataset):
     def __init__(self, split, dev = 'cpu',
@@ -96,28 +96,28 @@ class SNLT_Dataset(Dataset):
 
     def make_clips(self, image_folder, long, window, max_len = 60):
 
-        tensors = []
-
-        i = 0
-
-        list_images = []
+        tensors=[]
         window_list = []
+        i = 0
+        #print(len(os.listdir(image_folder)))
+        #with Pool(8) as p:
+        #    tensors = p.map(self.openimage, [ image for image in os.listdir(image_folder)], tensors)
 
-
-        for image in sorted(os.listdir(image_folder)):
+        for image in os.listdir(image_folder):
             i += 1
-            image = os.path.join(image_folder, image)
-            list_images.append(image)
-            if long >= i and i > long-window:
-                window_list.append(image)
-            elif i > long:
+            img = Image.open(os.path.join(image_folder,image))
+            tensor = self.transform(img).reshape(1,3,1,112,112)
+            #tensor.type(dtype=torch.int32)
 
-                list_images.extend(window_list)
+            tensors.append(tensor)
+            if long >= i and i > long-window:
+                window_list.append(tensor)
+            elif i > long:
+                #print(len(window_list))
+                tensors.extend(window_list)
                 window_list = []
                 i = 0
 
-        with Pool(4) as p:
-            tensors = p.map(self.openimage , list_images)
 
         #print(len(tensors))
         sequence = torch.cat(tensors,dim=2).to(self.device)
@@ -165,19 +165,65 @@ def decode_sentence(index_sentence, dictionary):
     sentence = [dictionary.idx2word[i] for i in index_sentence]
     return sentence
 
+def custom_iterator(dataset, batch_size, num_workers = 1, shuff = True):
+    index = [i for i in range(len(dataset))]
+    if shuff:
+        shuffle(index)
+    for i in range(0,batch_size*(len(index)//batch_size),batch_size):
+        indexes = index[i:i+batch_size]
+        #print(indexes)
+        #samples = [dataset.__getitem__(ind) for ind in indexes ]
+        #with Pool(num_workers) as p:
+            #samples = p.map(dataset.__getitem__ , indexes)
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            samples = executor.map(dataset.__getitem__, indexes)
+            samples = [sample for sample in samples]
+        yield samples
+
+        #with Pool(4) as p:
+        #    samples = p.map(dataset.__getitem__ , [range()])
+
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(split = 'train', dev = 'cuda', frames_path = "/home/joaquims/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/", csv_path = "data/annotations/", gloss = False)
+    dataset = SNLT_Dataset(split = 'train', dev = 'cpu', frames_path = "../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/", csv_path = "data/annotations/", gloss = False)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
+
+
+    it = iter(custom_iterator(dataset, 32, num_workers = 1))
+    start = time.time()
+    batch = next(it)
+    print(time.time()-start)
+    print(len(batch))
+
+    '''
     start = time.time()
     #print(len(dataset))
-    '''
-    for i in range(10):
-        clip, label = dataset[i]
-        print(clip.size())
-    '''
+
     loader = DataLoader(dataset, batch_size=64)
     it = iter(loader)
     videos, targets = next(it)
     print(videos.size())
     print(time.time()-start)
+
+    transform = transforms.Compose([transforms.Resize((112,112)),
+                            transforms.ToTensor(),
+                            transforms.Normalize(mean=[0.537,0.527,0.520],
+                                                 std=[0.284,0.293,0.324])])
+
+
+    def openimage(image):
+        img = Image.open(image)
+        tensor = transform(img).reshape(1,3,1,112,112)
+        return tensor
+
+    image_folder = './data/frames/images'
+    images = [os.path.join(image_folder,image) for image in sorted(os.listdir(image_folder))]
+    tensors = []
+    start = time.time()
+    #with Pool(1) as p:
+    #    tensors = p.map(openimage , images)
+    for image in images:
+        tensors.append(openimage(image))
+    print(time.time()-start)
+    print(type(tensors), tensors[0].size())
+    '''
