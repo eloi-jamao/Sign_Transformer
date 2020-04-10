@@ -140,7 +140,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 if __name__ == '__main__':
 
     import transformer as tf
-    import DataLoader as DL
+    import SNLT_Dataset as DL
     import torch
     from torch.utils.data import DataLoader
     import argparse

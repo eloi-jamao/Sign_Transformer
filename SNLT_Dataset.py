@@ -1,5 +1,7 @@
 import math
 import os
+import resource
+
 from torch.utils.data import Dataset, DataLoader
 import csv
 from torchvision.transforms import transforms
@@ -38,8 +40,6 @@ class SNLT_Dataset(Dataset):
         self.long_clips = long_clips
         self.window_clips = window_clips
 
-        if self.gloss:
-            self.gloss_dictionary = Dictionary(vocab_path='data/gloss_vocabulary.txt', gloss = True)
         self.dictionary = Dictionary()
 
         #Open the csv file and extract img_folder, gloss sentence and label sentence
@@ -126,7 +126,7 @@ class SNLT_Dataset(Dataset):
         sequence = torch.stack(tensors)
         return sequence
 
-    def make_clips(self, image_folder, long, window, max_len = 104):
+    def make_clips(self, image_folder, long, window, max_len = 60):
 
         tensors=[]
         window_list = []
@@ -207,7 +207,9 @@ if __name__ == '__main__':
 
     start = time.time()
     for i in dataset:
-        print("+")
+        s = time.time()
+        print('time loading images', time.time() - s)
+        print(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
     print('time loading images', time.time() - start)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)

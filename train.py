@@ -1,8 +1,9 @@
 import transformer as tf
 import argparse
-import DataLoader
+import SNLT_Dataset
+import resource
 import os
-import DataLoader as DL
+import SNLT_Dataset as DL
 import torch
 from torch.utils.data import DataLoader
 # import torch.multiprocessing as mp
@@ -33,8 +34,9 @@ test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path=frames_path
 
 model_cp = os.path.join(args.root, args.path_state) #to save the model state
 
+
 if args.end2end:
-    import adapted_transformer as tf
+    import transformer_adapted as tf
     src_vocab = 128
     print('Training end to end model')
 
@@ -51,7 +53,7 @@ dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, num_w
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
-model = tf.make_model(src_vocab, trg_vocab, N=args.n_blocks, d_model=args.d_model, d_ff=args.d_ff, h=args.att_heads)
+model = tf.make_model(trg_vocab, N=args.n_blocks, d_model=args.d_model, d_ff=args.d_ff, h=args.att_heads)
 
 if args.checkpoint is not None:
     model.load_state_dict(torch.load(args.checkpoint))

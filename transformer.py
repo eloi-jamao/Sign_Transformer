@@ -6,7 +6,7 @@ import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
 import os
-from DataLoader import decode_sentence
+from SNLT_Dataset import decode_sentence
 
 class EncoderDecoder(nn.Module):
     """
@@ -464,7 +464,7 @@ def evaluate_model(model, loader, device, max_seq, dictionary):
 
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
-    import DataLoader as dl
+    import SNLT_Dataset as dl
 
     model_dir = './models/G2T' #folder to save the model state
     src_vocab = 11
