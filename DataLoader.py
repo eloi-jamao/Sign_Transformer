@@ -1,3 +1,4 @@
+import math
 import os
 from torch.utils.data import Dataset, DataLoader
 import csv
@@ -11,14 +12,15 @@ from multiprocessing import Pool
 
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, split, dev = 'cpu',
-                 frames_path = "data/frames/",
-                 csv_path = "data/annotations/",
-                 gloss = False,
-                 create_vocabulary = False,
-                 long_clips = 6, window_clips = 2):
+    def __init__(self, split, dev='cpu',
+                 frames_path="data/frames/",
+                 csv_path="data/annotations/",
+                 gloss=False,
+                 transform=None,
+                 long_clips=6, window_clips=2,
+                 n_frames_min=43, n_frames_max=208):
 
-        splits = ['train','test','dev']
+        splits = ['train', 'test', 'dev']
         self.split = split
         if self.split not in splits:
             raise Exception('Split must be one of:', splits)
@@ -26,10 +28,11 @@ class SNLT_Dataset(Dataset):
         self.samples = []
         self.gloss = gloss
         self.device = dev
+
         #Paths
-        self.img_dir = frames_path + self.split
+        self.img_dir = os.path.join(frames_path, self.split)
         self.csv_path = csv_path
-        self.csv_file = csv_path + self.split + ".csv"
+        self.csv_file = os.path.join(csv_path, self.split + ".csv")
 
         #Clips
         self.long_clips = long_clips
@@ -40,16 +43,22 @@ class SNLT_Dataset(Dataset):
         self.dictionary = Dictionary()
 
         #Open the csv file and extract img_folder, gloss sentence and label sentence
+        features = os.listdir(self.img_dir)
+        self.max_len = 0
         with open(self.csv_file) as file:
             csv_reader = csv.reader(file, delimiter='|')
             next(csv_reader)
             for row in csv_reader:
-                self.samples.append((row[0], row[-2], row[-1]))
+                if row[0] in features:
+                    n_frames = len(os.listdir(os.path.join(self.img_dir, row[0])))
+                    if n_frames_min < n_frames < n_frames_max:
+                        l = n_frames / (long_clips - 2 * window_clips)
+                        l = math.ceil(l)
+                        if l > self.max_len:
+                            self.max_len = l
+                        self.samples.append((row[0], row[-2], row[-1]))
 
-        self.transform = transforms.Compose([transforms.Resize((112,112)),
-                                transforms.ToTensor(),
-                                transforms.Normalize(mean=[0.537,0.527,0.520],
-                                                     std=[0.284,0.293,0.324])])
+        self.transform = transform
 
 
 
@@ -66,7 +75,13 @@ class SNLT_Dataset(Dataset):
             gloss_sent = self.process_sentence(self.samples[idx][1], self.gloss_dictionary)
             return (img_fold, gloss_sent, label)
         else:
-            clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
+            clips = self.make_clips_seq(img_fold, self.long_clips, self.window_clips)
+            n = self.max_len - len(clips)
+            padding = torch.zeros(clips[0].shape)
+            padding = torch.stack(n*[padding])
+            clips = torch.cat((clips, padding), 0)
+            clips = clips.permute(0, 2, 1, 3, 4)
+            # clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
             return (clips, label)
 
 
@@ -93,8 +108,25 @@ class SNLT_Dataset(Dataset):
 
         return torch.LongTensor(tok_sent)
 
+    def make_clips_seq(self, image_folder,  long_clip, overlap=3):
 
-    def make_clips(self, image_folder, long, window, max_len = 60):
+        tensors = []
+        images = os.listdir(image_folder)
+        images.sort()
+        window = long_clip - 2 * overlap
+        for i in range(overlap, len(images) - overlap - 1, window):
+            window_list = []
+            for j in range(i - overlap, i + window + overlap):
+                if(j < len(images)):
+                    image = images[j]
+                    img = Image.open(os.path.join(image_folder, image))
+                    tensor = self.transform(img)
+                window_list.append(tensor)
+            tensors.append(torch.stack(window_list))
+        sequence = torch.stack(tensors)
+        return sequence
+
+    def make_clips(self, image_folder, long, window, max_len = 104):
 
         tensors=[]
         window_list = []
@@ -105,8 +137,9 @@ class SNLT_Dataset(Dataset):
 
         for image in os.listdir(image_folder):
             i += 1
-            img = Image.open(os.path.join(image_folder,image))
-            tensor = self.transform(img).reshape(1,3,1,112,112)
+            img = Image.open(os.path.join(image_folder, image))
+            img_t = self.transform(img)
+            tensor = img_t.reshape(1, 3, 1, 112, 112)
             #tensor.type(dtype=torch.int32)
 
             tensors.append(tensor)
@@ -128,17 +161,17 @@ class SNLT_Dataset(Dataset):
             #print('A',sequenceA.shape)
             sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2)
             #print('B',sequenceB.shape)
-            sequence = torch.cat((sequenceA,sequenceB), dim = 0)
+            sequence = torch.cat((sequenceA, sequenceB), dim = 0)
         else:
-            sequence = torch.cat(sequence,dim=0)
+            sequence = torch.cat(sequence, dim=0)
         #print(sequence.shape)
         sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
         return sequence
 
-    def openimage(self, image, tensors):
-        img = Image.open(os.path.join(image_folder,image))
-        tensor = self.transform(img).reshape(1,3,1,112,112)
-        tensors.append(tensor)
+    # def openimage(self, image, tensors):
+    #     img = Image.open(image)
+    #     tensor = self.transform(img).reshape(1, 3, 1, 112, 112)
+    #     tensors.append(tensor)
 
 class Dictionary(object):
     def __init__(self, vocab_path='data/vocabulary.txt', gloss = False):
@@ -166,21 +199,31 @@ def decode_sentence(index_sentence, dictionary):
 
 if __name__ == '__main__':
 
-    dataset = SNLT_Dataset(split = 'train', frames_path = "/home/jamao/Desktop/AIDL/Project/Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/", csv_path = "data/annotations/", gloss = False)
+    start = time.time()
+    dataset = SNLT_Dataset(split = 'train',
+                           frames_path = "data/features/",
+                           csv_path = "data/annotations/",
+                           gloss = False)
+
+    start = time.time()
+    for i in dataset:
+        print("+")
+
+    print('time loading images', time.time() - start)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
-
-    #print(len(dataset))
-    '''
-    for i in range(10):
-        clip, label = dataset[i]
-        print(clip.size())
-    '''
-    start = time.time()
-    sequence = dataset.make_clips('data/frames/images', long = 6, window = 2, max_len = 2)
-    print(type(sequence),sequence.size())
-    print('time loading images',time.time()-start)
-
-    start = time.time()
-    sequence = torch.load('data/tensors/images')
-    print(type(sequence), sequence.size())
-    print('time loading tensor',time.time()-start)
+    #
+    # #print(len(dataset))
+    # '''
+    # for i in range(10):
+    #     clip, label = dataset[i]
+    #     print(clip.size())
+    # '''
+    # start = time.time()
+    # sequence = dataset.make_clips('data/frames/images', long = 6, window = 2, max_len = 2)
+    # print(type(sequence),sequence.size())
+    # print('time loading images', time.time()-start)
+    #
+    # start = time.time()
+    # sequence = torch.load('data/tensors/images')
+    # print(type(sequence), sequence.size())
+    # print('time loading tensor',time.time()-start)

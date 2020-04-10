@@ -1,40 +1,37 @@
 import transformer as tf
 import argparse
+import DataLoader
 import os
 import DataLoader as DL
 import torch
 from torch.utils.data import DataLoader
-import torch.multiprocessing as mp
+# import torch.multiprocessing as mp
 import time
+import opts
+from torchvision.transforms import transforms
 
-parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
-parser.add_argument('-e2e', '--end2end', action='store_true', default = False, help = 'Train end to end model')
-parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
-parser.add_argument('-b', '--b_size', type=int, help='batch size', required = True)
-parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to load the model')
-parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
-parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default = 2048)
-parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
-parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
-parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
-parser.add_argument('-w', '--workers', type=int, help='learning rate', default = 2)
-args = parser.parse_args()
+args = opts.parse_training_opts()
 
-#torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
-if torch.cuda.is_available():
-    device = 'cuda'
-else:
-    device = 'cpu'
+device = args.device if torch.cuda.is_available() else 'cpu'
 print('Using device for training: ', device)
 
-frames_path = './data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/'
+frames_path = os.path.join(args.root, args.path_frames)
+annotations_path = os.path.join(args.root, args.path_annotations)
 
-train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path , create_vocabulary = True )
-dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
-test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
+frame_size = args.frame_size
+transform = transforms.Compose([transforms.Resize((frame_size, frame_size)),
+                                transforms.ToTensor(),
+                                transforms.Normalize(mean=[0.537, 0.527, 0.520],
+                                                     std=[0.284, 0.293, 0.324])])
 
-model_cp = './models/G2T/best_model' #to save the model state
+train_dataset = DL.SNLT_Dataset(split='train', dev=device, frames_path=frames_path, csv_path=annotations_path,
+                                long_clips=args.clips_long, window_clips=args.clips_overlap, transform=transform)
+dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path=frames_path, csv_path=annotations_path,
+                              long_clips=args.clips_long, window_clips=args.clips_overlap, transform=transform)
+test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path=frames_path, csv_path=annotations_path,
+                               long_clips=args.clips_long, window_clips=args.clips_overlap, transform=transform)
+
+model_cp = os.path.join(args.root, args.path_state) #to save the model state
 
 if args.end2end:
     import adapted_transformer as tf
@@ -49,8 +46,8 @@ else:
 trg_vocab = len(train_dataset.dictionary.idx2word)
 
 
-train_loader = DataLoader(train_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
-dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
+train_loader = DataLoader(train_dataset, batch_size=args.b_size, shuffle=True, num_workers=args.workers)
+dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, num_workers=args.workers)
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
@@ -63,8 +60,9 @@ if args.checkpoint is not None:
 model.to(device)
 model_opt = tf.NoamOpt(args.d_model, 1, 2000,
                        torch.optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98), eps=1e-9))
+
 if __name__ == '__main__':
-    mp.set_start_method('spawn')
+    # mp.set_start_method('spawn')
 
     train_losses = []
     dev_losses = []
@@ -78,7 +76,6 @@ if __name__ == '__main__':
             train_loss = tf.run_epoch(train_loader, model,
                                       tf.SimpleLossCompute(model.generator, criterion, model_opt),
                                       device)
-
             model.eval()
             dev_loss = tf.run_epoch(dev_loader, model,
                                       tf.SimpleLossCompute(model.generator, criterion, None),

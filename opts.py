@@ -2,68 +2,36 @@ import argparse
 import os
 
 
-def parse_opts():
-    parser = argparse.ArgumentParser(description='PyTorch Transformer Language Model')
+def parse_training_opts():
 
-    parser.add_argument('--data', type=str, default=os.path.join(os.getcwd(), 'data'),
-                        help='location of the data corpus')
-    parser.add_argument('--device', type=str, default='cpu')
-    parser.add_argument('--model_cp', type=str, default=os.path.join(os.getcwd(), 'model', 'best_model'), help='to save the model state')
-    parser.add_argument('--train_losses', type=str, default=os.path.join(os.getcwd(), 'model', 'train_losses'))
-    parser.add_argument('--dev_losses', type=str, default=os.path.join(os.getcwd(), 'model', 'dev_losses'))
-    # parser.add_argument('--emsize', type=int, default=200,
-    #                     help='size of word embeddings')
-    # parser.add_argument('--nhid', type=int, default=200,
-    #                     help='number of hidden units per layer')
-    # parser.add_argument('--nlayers', type=int, default=2,
-    #                     help='number of layers')
-    # parser.add_argument('--lr', type=float, default=20,
-    #                     help='initial learning rate')
-    # parser.add_argument('--clip', type=float, default=0.25,
-    #                     help='gradient clipping')
-    # parser.add_argument('--epochs', type=int, default=40,
-    #                     help='upper epoch limit')
-    # parser.add_argument('--batch_size', type=int, default=20, metavar='N',
-    #                     help='batch size')
-    # parser.add_argument('--bptt', type=int, default=35,
-    #                     help='sequence length')
-    # parser.add_argument('--dropout', type=float, default=0.2,
-    #                     help='dropout applied to layers (0 = no dropout)')
-    # parser.add_argument('--tied', action='store_true',
-    #                     help='tie the word embedding and softmax weights')
-    # parser.add_argument('--seed', type=int, default=1111,
-    #                     help='random seed')
-    # parser.add_argument('--cuda', action='store_true',
-    #                     help='use CUDA')
-    # parser.add_argument('--log-interval', type=int, default=200, metavar='N',
-    #                     help='report interval')
-    # parser.add_argument('--save', type=str, default='model.pt',
-    #                     help='path to save the final model')
-    # parser.add_argument('--onnx-export', type=str, default='',
-    #                     help='path to export the final model in onnx format')
-    # parser.add_argument('--nhead', type=int, default=2,
-    #                     help='the number of heads in the encoder/decoder of the transformer model')
+    parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
 
-    # # Resnet params
-    parser.add_argument('--n_classes', default=400, type=int,
-                        help='Number of classes (activitynet: 200, kinetics: 400, ucf101: 101, hmdb51: 51)')
-    parser.add_argument('--resnet_shortcut', default='B', type=str, help='Shortcut type of resnet (A | B)')
-    parser.add_argument('--sample_size', default=112, type=int, help='Height and width of inputs')
-    parser.add_argument('--sample_duration', default=16, type=int, help='Temporal duration of inputs')
+    # Folders
+    parser.add_argument('-r', '--root', type=str, help='data root folder', default=os.path.join(os.getcwd(), 'data'))
+    parser.add_argument('-pf', '--path_frames', type=str, help='frames folder', default='features')
+    parser.add_argument('-pa', '--path_annotations', type=str, help='annotations path', default='annotations')
+    parser.add_argument('-ps', '--path_state', type=str, help='state folder', default=os.path.join('models', 'G2T', 'best_model'))
 
-    #
-    # # Transformer params
-    parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
-    parser.add_argument('-b', '--b_size', type=int, help='batch size', default=1)
+    parser.add_argument('-dv', '--device', type=str, help='device', default='cuda')
+    parser.add_argument('-e2e', '--end2end', action='store_true', default=True, help='Train end to end model')
+
     parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to load the model')
-    parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default=512)
-    parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default=6)
+    # Dimensions
+    parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default=128)
+    parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default=512)
+    parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default=2)
     parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default=8)
-    parser.add_argument('-lr', '--learning_rate', type=float, help='number of attention heads per block', default=0.0)
-    parser.add_argument('-sb', '--src_vocab', type=int, default=None)
-    parser.add_argument('-tb', '--trg_vocab', type=int, default=None)
-    parser.add_argument('-dff', '--d_ff', type=int, default=2048)
-    parser.add_argument('-do', '--dropout', type=float, default=0.1)
+    # Model params
+    parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default=0.0)
+    parser.add_argument('-w', '--workers', type=int, help='learning rate', default=2)
+    parser.add_argument('-b', '--b_size', type=int, help='batch size', default=32)
+    # Data params
+    parser.add_argument('-cl', '--clips_long', type=int, help='clips size', default=6)
+    parser.add_argument('-co', '--clips_overlap', type=int, help='overlap size', default=2)
+    parser.add_argument('-fs', '--frame_size', type=int, help='frame size', default=112)
+
+    parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
+
 
     args = parser.parse_args()
 
