@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.multiprocessing as mp
 import time
+import bleu
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
 parser.add_argument('-e2e', '--end2end', action='store_true', default = False, help = 'Train end to end model')
@@ -34,7 +35,7 @@ train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_p
 dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
 test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
 
-model_cp = './models/G2T/best_model' #to save the model state
+model_cp = './models/best_model' #to save the model state
 
 if args.end2end:
     import adapted_transformer as tf
@@ -90,10 +91,13 @@ if __name__ == '__main__':
             if not best_loss or (dev_loss < best_loss):
                 torch.save(model.state_dict(), model_cp)
 
-            torch.save(train_losses, 'models/G2T/train_losses')
-            torch.save(dev_losses, 'models/G2T/dev_losses')
+            if epoch > (args.epochs // 3) and epoch % 25 == 0:
+                bleu.score_model(model, test_loader, device, train_dataset.dictionary)
 
 
     except KeyboardInterrupt:
         print('-' * 89)
         print('Exiting from training early')
+
+torch.save(train_losses, 'models/train_losses')
+torch.save(dev_losses, 'models/dev_losses')

@@ -137,6 +137,26 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
     return ys
 
+def score_model(model, loader, device, dictionary, verbose = False):
+    model.eval()
+
+    print('Generating corpus with model...')
+    pred_corpus = tf.evaluate_model(model,
+                                    loader,
+                                    device,
+                                    max_seq = 27,
+                                    dictionary = dictionary)
+
+    print('Loading reference corpus...')
+    test_corpus = reference_corpus(loader, dictionary)
+    if verbose:
+        print('------Example sample-------')
+        print('Reference sentence:\n',test_corpus[0][0],'\nGenerated equivalent:\n',pred_corpus[0])
+
+    for n in [1,2,3,4]:
+        results = compute_bleu(test_corpus, pred_corpus, max_order = n, smooth=True)
+        print('Bleu score with n_grams =',n, ':',results[0])
+
 if __name__ == '__main__':
 
     import transformer as tf
@@ -169,25 +189,8 @@ if __name__ == '__main__':
 
     model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, d_ff=d_ff, h= att_heads)
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
-    model.eval()
 
-    print('Generating corpus with model...')
-    pred_corpus = tf.evaluate_model(model,
-                                    test_loader,
-                                    device,
-                                    max_seq = 27,
-                                    dictionary = train_dataset.dictionary)
-
-    print('Loading reference corpus...')
-    test_corpus = reference_corpus(test_loader, train_dataset.dictionary)
-
-    print('------Example sample-------')
-    print('Reference sentence:\n',test_corpus[0][0],'\nGenerated equivalent:\n',pred_corpus[0])
-
-    for n in [1,2,3,4]:
-        results = compute_bleu(test_corpus, pred_corpus, max_order = n, smooth=True)
-        print('Bleu score with n_grams =',n, ':',results[0])
-
+    score_model(model, test_loader, device, train_dataset.dictionary, verbose = True)
 
     file_path = './models/G2T/NLL/bs128_NLL/generated_corpus.txt'
     #write_corpus(pred_corpus, file_path)
