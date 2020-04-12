@@ -21,7 +21,6 @@ The code used was an adapted version of the [Annotated Transformer](https://nlp.
 
 ## Requirements
 - Python 3+
-- Pytorch 1.4.0+
 - torchtext 0.4.0+
 - Download and extract the dataset [RWTH-PHOENIX-Weather 2014 T](https://www-i6.informatik.rwth-aachen.de/~koller/RWTH-PHOENIX-2014-T/) and process it with image2tensor.py
 
