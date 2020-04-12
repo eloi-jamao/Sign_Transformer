@@ -18,7 +18,8 @@ parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward repres
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
-parser.add_argument('-w', '--workers', type=int, help='learning rate', default = 2)
+parser.add_argument('-w', '--workers', type=int, help='number of workers to load data', default = 2)
+parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
 args = parser.parse_args()
 
 #torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -29,7 +30,7 @@ else:
     device = 'cpu'
 print('Using device for training: ', device)
 
-frames_path = './data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/'
+frames_path = args.frames_path
 
 train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path , create_vocabulary = True )
 dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
@@ -92,8 +93,10 @@ if __name__ == '__main__':
                 torch.save(model.state_dict(), model_cp)
 
             if epoch > (args.epochs // 3) and epoch % 25 == 0:
-                bleu.score_model(model, test_loader, device, train_dataset.dictionary)
-
+                try:
+                    bleu.score_model(model, test_loader, device, train_dataset.dictionary)
+                except:
+                    print('Bleu score error occurred, continuing with training')
 
     except KeyboardInterrupt:
         print('-' * 89)

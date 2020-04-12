@@ -7,6 +7,7 @@ import torch
 from PIL import Image
 import time
 from multiprocessing import Pool
+import multiprocessing as mp
 from random import shuffle
 import concurrent.futures
 
@@ -57,7 +58,7 @@ class SNLT_Dataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        img_fold = os.path.join(self.img_dir, self.samples[idx][0],"")
+        img_fold = os.path.join(self.img_dir, self.samples[idx][0],"")[:-1]
         #print(img_fold, type(img_fold))
 
         label = self.process_sentence(self.samples[idx][2], self.dictionary)
@@ -67,6 +68,7 @@ class SNLT_Dataset(Dataset):
             return (img_fold, gloss_sent, label)
         else:
             clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
+            #clips = torch.load(img_fold)
             return (clips, label)
 
 
@@ -165,37 +167,98 @@ def decode_sentence(index_sentence, dictionary):
     sentence = [dictionary.idx2word[i] for i in index_sentence]
     return sentence
 
-def custom_iterator(dataset, batch_size, num_workers = 1, shuff = True):
-    index = [i for i in range(len(dataset))]
-    if shuff:
-        shuffle(index)
-    for i in range(0,batch_size*(len(index)//batch_size),batch_size):
-        indexes = index[i:i+batch_size]
-        #print(indexes)
-        #samples = [dataset.__getitem__(ind) for ind in indexes ]
-        #with Pool(num_workers) as p:
-            #samples = p.map(dataset.__getitem__ , indexes)
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            samples = executor.map(dataset.__getitem__, indexes)
-            samples = [sample for sample in samples]
-            clips = torch.stack([sample[0] for sample in samples])
-            targets = torch.stack([sample[1] for sample in samples])
-        yield clips, targets
+class Custom_iterator(object):
+    def __init__(self, dataset, batch_size, num_workers = 1, shuff = True):
+        self.dataset=dataset
+        self.workers = num_workers
+        self.batch_size = batch_size
+        self.shuff = shuffle
 
-        #with Pool(4) as p:
-        #    samples = p.map(dataset.__getitem__ , [range()])
+    def mp_iterate(self):
+
+        index = [i for i in range(len(dataset))]
+        if shuff:
+            shuffle(index)
+        for i in range(0,batch_size*(len(index)//batch_size),batch_size):
+            indexes = index[i:i+batch_size]
+            #print(indexes)
+
+            output = []
+            q = mp.Queue()
+            processes = []
+            for w in range(num_workers):
+                a = w*(batch_size//num_workers)
+                b = a + (batch_size//num_workers)
+                #print(a,b)
+                chunk = indexes[a:b]
+                proc = mp.Process(target=load_chunk, args=(dataset,chunk,q, num_workers))
+                processes.append(proc)
+                proc.start()
+            for proc in processes:
+                proc.join()
+            #q.close()
+            #time.sleep(2)
+            while not q.empty():
+                chunk = q.get()
+                output.append(chunk)
+            clips = torch.cat([chunk[0] for chunk in output], dim=0)
+            target = torch.cat([chunk[1] for chunk in output], dim=0)
+            yield clips, target
+
+    def pool_iterate(self):
+        index = [i for i in range(len(self.dataset))]
+        if self.shuff:
+            shuffle(index)
+        for i in range(0,self.batch_size*(len(index)//self.batch_size),self.batch_size):
+            indexes = index[i:i+self.batch_size]
+            #print(indexes)
+            #print('starting iterator')
+            chunks = []
+            for w in range(self.workers):
+                a = w*(self.batch_size//self.workers)
+                b = a + (self.batch_size//self.workers)
+                chunks.append(indexes[a:b])
+            with concurrent.futures.ProcessPoolExecutor(max_workers = self.workers) as executor:
+                samples = executor.map(self.pool_chunks, chunks)
+                samples = [sample for sample in samples]
+                clips = torch.cat([sample[0] for sample in samples], dim=0)
+                targets = torch.cat([sample[1] for sample in samples], dim=0)
+            yield clips, targets
+
+
+    def pool_chunks(self, chunk):
+        #print('starting worker')
+        samples = [self.dataset[i] for i in chunk]
+        clips = torch.stack([sample[0] for sample in samples], dim=0)
+        targets = torch.stack([sample[1] for sample in samples],dim=0)
+        return clips,targets
+
+
+    def load_chunk(self, chunk, queue):
+        samples = [self.dataset[i] for i in chunk]
+        #print(type(samples[0][0]),samples[0][0].shape)
+        clips = torch.stack([sample[0] for sample in samples], dim=0)
+        targets = torch.stack([sample[1] for sample in samples],dim=0)
+        #print(clips.shape, targets.shape)
+        queue.put((clips, targets))
+        queue.close()
+        time.sleep(2)
+        #while queue.qsize() != self.workers:
+            #time.sleep(.5)
 
 if __name__ == '__main__':
-
-    dataset = SNLT_Dataset(split = 'train', dev = 'cpu', frames_path = "../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/", csv_path = "data/annotations/", gloss = False)
+    mp.set_start_method('spawn')
+    frames = '../Sign_Transformer1/data/PHOENIX-2014-T-release-v3/PHOENIX-2014-T/features/fullFrame-210x260px/'
+    dataset = SNLT_Dataset(split = 'train', dev = 'cpu', frames_path = frames, csv_path = "data/annotations/", gloss = False)
     #train_loader = DataLoader(dataset, batch_size = 4, shuffle = False)
 
 
-    it = iter(custom_iterator(dataset, 3, num_workers = 1))
+    it = iter(Custom_iterator(dataset, 6, num_workers = 1).pool_iterate())
     start = time.time()
     batch = next(it)
     print(time.time()-start)
     src,trg = batch
+    print(src.shape, trg.shape)
 
     '''
     start = time.time()

@@ -66,7 +66,8 @@ class SNLT_Dataset(Dataset):
             gloss_sent = self.process_sentence(self.samples[idx][1], self.gloss_dictionary)
             return (img_fold, gloss_sent, label)
         else:
-            clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
+            #clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
+            clips = torch.load(img_fold)
             return (clips, label)
 
 

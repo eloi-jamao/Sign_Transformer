@@ -31,13 +31,13 @@ print('Using device for training: ', device)
 frames_path = '/home/joaquims/dataset_ssd/train_L6_W2/'
 
 train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path , create_vocabulary = True )
-#dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
-#test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
+dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
+test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
 
 model_cp = './models/G2T/best_model' #to save the model state
 
 if args.end2end:
-    import adapted_transformer as tf
+    import adapted_transformer_last as tf
     src_vocab = 128
     print('Training end to end model')
 
@@ -49,9 +49,9 @@ else:
 trg_vocab = len(train_dataset.dictionary.idx2word)
 
 
-train_loader = DataLoader(train_dataset, batch_size=args.b_size, shuffle=False, num_workers = args.workers)
-#dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
-#test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+train_loader = DL.Custom_iterator(train_dataset, batch_size=args.b_size, shuff=False, num_workers = args.workers)
+dev_loader = DL.Custom_iterator(dev_dataset, batch_size=args.b_size, shuff=True, num_workers = args.workers)
+test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
 model = tf.make_model(src_vocab, trg_vocab, N=args.n_blocks, d_model=args.d_model, d_ff=args.d_ff, h=args.att_heads)

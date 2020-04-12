@@ -9,12 +9,6 @@ parser.add_argument('-in', '--input', type=str, help='path to folder with subseq
 parser.add_argument('-out', '--output', type=str, help='Empty folder to store the tensors')
 args = parser.parse_args()
 
-if torch.cuda.is_available():
-    device = 'cuda'
-else:
-    device = 'cpu'
-
-print('using device:',device)
 
 transform = transforms.Compose([transforms.Resize((112,112)),
                                 transforms.ToTensor(),
@@ -24,10 +18,9 @@ transform = transforms.Compose([transforms.Resize((112,112)),
 path = args.input #path to the folder with all directories containing images
 out = args.output #path to the folder where we save all the tensors
 i=0
-long = 6
-window = 2
-max_len = 45
-#with torch.cuda.device(device): #uncomment and tab everything under it for faster processing with GPU
+long = 20
+window = 10
+max_len = 22
 
 for folder in os.listdir(path):
     tensors=[]
@@ -57,10 +50,14 @@ for folder in os.listdir(path):
         sequence = torch.cat((sequenceA,sequenceB), dim = 0)
     else:
         sequence = torch.cat(sequence,dim=0)
+    try:
+        sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
+        #print(sequence.shape)
+        torch.save(sequence, os.path.join(out,folder))
 
-    sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
-    #print(sequence.shape)
-    torch.save(sequence, os.path.join(out,folder))
+    except:
+        pass
+        
     if i % 100 == 0:
         print('Processing...',i,'folders done')
     i+=1

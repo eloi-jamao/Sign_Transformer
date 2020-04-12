@@ -294,7 +294,7 @@ def run_epoch(data_iter, model, loss_compute, device):
     total_loss = 0
     tokens = 0
     start = time.time()
-    for i, batch in enumerate(data_iter):
+    for i, batch in enumerate(data_iter.pool_iterate()):
         src, trg = batch
         #src = torch.load(img_path)
         batch = Batch(src, trg)
