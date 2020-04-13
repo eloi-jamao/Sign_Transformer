@@ -18,7 +18,7 @@ parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward repres
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
-parser.add_argument('-w', '--workers', type=int, help='number of workers to load data', default = 2)
+parser.add_argument('-w', '--workers', type=int, help='number of workers to load data', default = 0)
 parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
 args = parser.parse_args()
 
@@ -102,5 +102,5 @@ if __name__ == '__main__':
         print('-' * 89)
         print('Exiting from training early')
 
-torch.save(train_losses, 'models/train_losses')
-torch.save(dev_losses, 'models/dev_losses')
+        torch.save(train_losses, 'models/train_losses')
+        torch.save(dev_losses, 'models/dev_losses')
