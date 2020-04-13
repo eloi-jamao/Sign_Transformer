@@ -12,7 +12,7 @@ from multiprocessing import Pool
 class SNLT_Dataset(Dataset):
     def __init__(self, split, frames_path,
                  dev = 'cpu',
-                 csv_path = "data/annotations/",
+                 csv_path = "../data/annotations/",
                  gloss = False,
                  create_vocabulary = False,
                  long_clips = 6, window_clips = 2):
