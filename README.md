@@ -35,11 +35,12 @@ python3 train.py -e 500 -b 64 -dm 128 -df 512 -n 2 -at 8
 
 #### Using 2+1D Resnet as CNN for feature extraction
 ```python
-python3 train.py -e 'epochs' -b 32 -dm 128 -df 512 -n 2 -at 8 -e2e -w 2 --features-path 'path to extracted features from images' 
+python3 train.py -e 'epochs' -b 32 -dm 128 -df 512 -n 2 -at 8 -e2e -w 2 -features-path 'path to extracted features from images' 
 ```
-For faster training we exrtacted the features previously using img2tensor.py and saving. 
-See python3 img2tensor.py -h for usage
-
+For faster training we exrtacted the features previously using img2tensor.py and saving. See for usage:
+```
+python3 img2tensor.py -h 
+```
 #### Using 3D Resnet as CNN for feature extraction
 ```python
 python3 Magda you shloud fill this line
