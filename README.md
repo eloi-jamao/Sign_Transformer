@@ -26,7 +26,9 @@ The code used was an adapted version of the [Annotated Transformer](https://nlp.
 
 ## Usage
 
-### G2T: Training Gloss to text model  
+### G2T: Training Gloss to text model
+
+The best model obtained in this step is a baseline for our further experiments
 
 ```python
 python3 train.py -e 500 -b 64 -dm 128 -df 512 -n 2 -at 8
@@ -37,14 +39,17 @@ python3 train.py -e 500 -b 64 -dm 128 -df 512 -n 2 -at 8
 ```python
 python3 train.py -e 'epochs' -b 32 -dm 128 -df 512 -n 2 -at 8 -e2e -w 2 -features-path 'path to extracted features from images'
 ```
-For faster training we exrtacted the features previously using img2tensor.py and saving. See for usage:
+For faster training we extracted the features previously using img2tensor.py and saving. See for usage:
 ```
 python3 img2tensor.py -h
 ```
 #### Using 3D Resnet as CNN for feature extraction
+
 ```python
 python3 S2T/3D/s2t_train.py -e 'epochs' -b 1 -n 2 -at 8 -w 2 -m 'path to pretrained 3d resnet' -f 'path to dataset' -o 'output path'
 ```
+*pretrained model resnet-34-kinetics.pth used in this work can be found [here](https://drive.google.com/drive/folders/1zvl89AgFAApbH0At-gMuZSeQB_LpNP-M)
+*the feature extraction network (3D resnet) will be initialized with weights coming from resnet-34-kinetics.pth, pretrained on Kinetics dataset and trained jointly for the final task
 
 ### Evaluation
 
