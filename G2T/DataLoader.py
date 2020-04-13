@@ -13,6 +13,7 @@ class SNLT_Dataset(Dataset):
     def __init__(self, split, dev = 'cpu',
                  frames_path = "../data/frames/",
                  csv_path = os.path.join('..','data','annotations'),
+                 gloss = False
                  create_vocabulary = False,
                  long_clips = 6, window_clips = 2):
 

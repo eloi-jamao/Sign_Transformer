@@ -32,9 +32,9 @@ print('Using device for training: ', device)
 
 frames_path = args.frames_path
 
-train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path , create_vocabulary = True )
-dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
-test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
+train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path, gloss = True, create_vocabulary = True )
+dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, gloss = True, create_vocabulary = True)
+test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, gloss = True, create_vocabulary = True)
 
 model_cp = os.path.join('models','best_model') #to save the model state
 
