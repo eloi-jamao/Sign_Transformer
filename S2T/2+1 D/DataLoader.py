@@ -35,7 +35,7 @@ class SNLT_Dataset(Dataset):
         self.window_clips = window_clips
 
         if self.gloss:
-            self.gloss_dictionary = Dictionary(vocab_path='data/gloss_vocabulary.txt', gloss = True)
+            self.gloss_dictionary = Dictionary(vocab_path='../data/gloss_vocabulary.txt', gloss = True)
         self.dictionary = Dictionary()
 
         #Open the csv file and extract img_folder, gloss sentence and label sentence
@@ -116,7 +116,7 @@ class SNLT_Dataset(Dataset):
         tensors.append(tensor)
 
 class Dictionary(object):
-    def __init__(self, vocab_path='data/vocabulary.txt', gloss = False):
+    def __init__(self, vocab_path='../data/vocabulary.txt', gloss = False):
 
         self.gloss = gloss
 
