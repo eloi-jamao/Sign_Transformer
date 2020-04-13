@@ -12,7 +12,7 @@ from multiprocessing import Pool
 class SNLT_Dataset(Dataset):
     def __init__(self, split, frames_path,
                  dev = 'cpu',
-                 csv_path = "../data/annotations/",
+                 csv_path = "../../data/annotations/",
                  gloss = False,
                  create_vocabulary = False,
                  long_clips = 6, window_clips = 2):
@@ -34,7 +34,7 @@ class SNLT_Dataset(Dataset):
         self.long_clips = long_clips
         self.window_clips = window_clips
 
-        self.gloss_dictionary = Dictionary(vocab_path='../data/gloss_vocabulary.txt', gloss = True)
+        self.gloss_dictionary = Dictionary(vocab_path='../../data/gloss_vocabulary.txt', gloss = True)
         self.dictionary = Dictionary()
 
         #Open the csv file and extract img_folder, gloss sentence and label sentence
@@ -115,7 +115,7 @@ class SNLT_Dataset(Dataset):
         tensors.append(tensor)
 
 class Dictionary(object):
-    def __init__(self, vocab_path='../data/vocabulary.txt', gloss = False):
+    def __init__(self, vocab_path='../../data/vocabulary.txt', gloss = False):
 
         self.gloss = gloss
 
