@@ -60,40 +60,15 @@ class SNLT_Dataset(Dataset):
         img_fold = os.path.join(self.img_dir, self.samples[idx][0],"")
         #print(img_fold, type(img_fold))
 
-        label = self.process_sentence(self.samples[idx][2], self.dictionary)
+        label = process_sentence(self.samples[idx][2], self.dictionary)
 
         if self.gloss:
-            gloss_sent = self.process_sentence(self.samples[idx][1], self.gloss_dictionary)
+            gloss_sent = process_sentence(self.samples[idx][1], self.gloss_dictionary)
             return (img_fold, gloss_sent, label)
         else:
             #clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
             clips = torch.load(img_fold)
             return (clips, label)
-
-
-    def process_sentence(self, sentence, dictionary_ ):
-        #first four words are:
-        pad, start, end, unk = [dictionary_.idx2word[i] for i in range(4)]
-        tok_sent = []
-
-        #tokenization using the dictionary
-        for word in sentence.split():
-            if word in dictionary_.idx2word:
-                tok_sent.append(dictionary_.word2idx[word])
-            else:
-                tok_sent.append(dictionary_.word2idx[unk])
-
-        #now introduce the start and end tokens
-        tok_sent.insert(0, dictionary_.word2idx[start])
-        tok_sent.append(2) # 2 is the end token
-
-        #padding sentence to max_seq
-        max_seq = 17 if dictionary_.gloss else 27
-        for i in range(max_seq - len(tok_sent)):
-            tok_sent.append(dictionary_.word2idx[pad])
-
-        return torch.LongTensor(tok_sent)
-
 
     def make_clips(self, image_folder, long, window, max_len = 60):
 
@@ -160,6 +135,29 @@ class Dictionary(object):
 
     def __len__(self):
         return len(self.idx2word)
+
+def process_sentence(sentence, dictionary_):
+    #first four words are:
+    pad, start, end, unk = [dictionary_.idx2word[i] for i in range(4)]
+    tok_sent = []
+
+    #tokenization using the dictionary
+    for word in sentence.split():
+        if word in dictionary_.idx2word:
+            tok_sent.append(dictionary_.word2idx[word])
+        else:
+            tok_sent.append(dictionary_.word2idx[unk])
+
+    #now introduce the start and end tokens
+    tok_sent.insert(0, dictionary_.word2idx[start])
+    tok_sent.append(2) # 2 is the end token
+
+    #padding sentence to max_seq
+    max_seq = 17 if dictionary_.gloss else 27
+    for i in range(max_seq - len(tok_sent)):
+        tok_sent.append(dictionary_.word2idx[pad])
+
+    return torch.LongTensor(tok_sent)
 
 def decode_sentence(index_sentence, dictionary):
     sentence = [dictionary.idx2word[i] for i in index_sentence]
