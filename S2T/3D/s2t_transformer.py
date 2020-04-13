@@ -5,10 +5,9 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
-from adapted_transformer import Generator, Encoder, EncoderLayer, \
-    Decoder, DecoderLayer, MultiHeadedAttention, Embeddings, \
-    PositionwiseFeedForward, PositionalEncoding, subsequent_mask
-from DataLoader import decode_sentence
+from utils import Generator, Encoder, EncoderLayer, Decoder, DecoderLayer, \
+    MultiHeadedAttention, Embeddings, PositionwiseFeedForward, \
+    PositionalEncoding, subsequent_mask, decode_sentence
 
 
 if torch.cuda.is_available():

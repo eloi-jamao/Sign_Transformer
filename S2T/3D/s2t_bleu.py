@@ -27,8 +27,10 @@ import os
 from video_loader import Video
 from spatial_transforms import (Compose, Normalize, Scale, CenterCrop, ToTensor)
 from temporal_transforms import LoopPadding
-from slt_transformer import evaluate_model, make_model
+from s2t_transformer import evaluate_model, make_model
 from resnet3d import resnet34
+import torch
+import argparse
 
 
 def _get_ngrams(segment, max_order):
@@ -126,32 +128,9 @@ def reference_corpus(loader, dictionary, references):
         #break
     return test_corpus
 
-def write_corpus(corpus, path):
-    with open(path, 'w') as f:
-        for line in corpus:
-            line = ' '.join(line)+'.\n'
-            f.write(line)
-
-def greedy_decode(model, src, src_mask, max_len, start_symbol):
-    memory = model.encode(src, src_mask)
-    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
-    for i in range(max_len-1):
-        out = model.decode(memory, src_mask,
-                           Variable(ys),
-                           Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
-        prob = model.generator(out[:, -1])
-        _, next_word = torch.max(prob, dim = 1)
-        next_word = next_word.data[0]
-        ys = torch.cat([ys,
-                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
-    return ys
 
 if __name__ == '__main__':
 
-    import DataLoader as DL
-    import torch
-    from torch.utils.data import DataLoader
-    import argparse
     parser = argparse.ArgumentParser(description='Bleu score')
     parser.add_argument('-m', '--model', type=str, help='path to model file', default=None)
     parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate representations', default = 512)
@@ -160,9 +139,8 @@ if __name__ == '__main__':
     parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
     parser.add_argument('-d', '--sample_duration', type=float, help='sample duration', default = 4)
     parser.add_argument('-s', '--sample_size', type=float, help='sample size', default = 128)
+    parser.add_argument('-f', '--frames_path', type=str, help='path to dataset', required = True)
     args = parser.parse_args()
-
-    root_dir = "../data"
 
     model_cp = args.model
     N_blocks = args.n_blocks
@@ -171,24 +149,34 @@ if __name__ == '__main__':
     att_heads = args.att_heads
     sample_duration = args.sample_duration
     sample_size = args.sample_size
+    frames_path = args.frames_path
 
     mean = [114.7748, 107.7354, 99.4750]
 
-    spatial_transform = Compose([Scale(sample_size),#really needed?
+    spatial_transform = Compose([Scale(sample_size),
                                  CenterCrop(sample_size),
                                  ToTensor(),
                                  Normalize(mean, [1, 1, 1])])
     temporal_transform = LoopPadding(sample_duration)
 
-    data_test = Video(os.path.join(root_dir, "train"),
-                      "annotations_train.csv",
+    data_train = Video(os.path.join(frames_path, "train"),
+                       "S2T/3D/data/annotations/train.csv",
+                       spatial_transform=spatial_transform,
+                       temporal_transform=temporal_transform,
+                       sample_duration=sample_duration)
+    test_loader = torch.utils.data.DataLoader(
+        data_train, batch_size=1, shuffle=False)
+
+    data_test = Video(os.path.join(frames_path, "test"),
+                      "S2T/3D/data/annotations/test.csv",
                       spatial_transform=spatial_transform,
                       temporal_transform=temporal_transform,
                       sample_duration=sample_duration)
     test_loader = torch.utils.data.DataLoader(
         data_test, batch_size=1, shuffle=False)
 
-    trg_vocab = len(data_test.dictionary.idx2word)
+    dictionary = data_train.dictionary
+    trg_vocab = len(dictionary.idx2word)
 
     if torch.cuda.is_available():
         device = 'cuda'
@@ -205,18 +193,18 @@ if __name__ == '__main__':
 
     print('Generating corpus with model...')
     pred_corpus, references = evaluate_model(model,
-                                 test_loader,
-                                 device,
-                                 max_seq=32,
-                                 dictionary=data_test.dictionary)
+                                             test_loader,
+                                             device,
+                                             max_seq=32,
+                                             dictionary=dictionary)
 
     print('Loading reference corpus...')
-    test_corpus = reference_corpus(test_loader, data_test.dictionary, references)
+    test_corpus = reference_corpus(test_loader, dictionary, references)
 
     print('------Example sample-------')
     for i in range(10):
-        print('Reference sentence:\n',test_corpus[i][0],'\nGenerated equivalent:\n',pred_corpus[i])
+        print('Reference sentence:\n', test_corpus[i][0], '\nGenerated equivalent:\n', pred_corpus[i])
 
     for n in [1,2,3,4]:
         results = compute_bleu(test_corpus, pred_corpus, max_order=n, smooth=True)
-        print('Bleu score with n_grams =',n, ':',results[0])
+        print('Bleu score with n_grams =', n, ':', results[0])

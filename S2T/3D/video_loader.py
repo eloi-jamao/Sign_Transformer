@@ -5,7 +5,7 @@ import os
 import functools
 import copy
 import csv
-from DataLoader import Dictionary, process_sentence
+from utils import Dictionary, process_sentence
 
 
 def pil_loader(path):
@@ -58,16 +58,16 @@ def load_annotation_data(data_file_path):
 
 # https://github.com/kenshohara/3D-ResNets-PyTorch/blob/master/datasets/kinetics.py
 def make_dataset(root_path, annotation_path,
-                 #n_samples_for_each_video,
                  sample_duration,
                  dictionary):
     video2text = load_annotation_data(annotation_path)
+    valid_videos = video2text.keys()
 
     dataset = []
     i = 0
     dataset_size = len(os.listdir(root_path))
     for i, video in enumerate(os.listdir(root_path)):
-        if video == ".DS_Store":
+        if video == ".DS_Store" or video not in valid_videos:
             continue
 
         if i % 1000 == 0:
