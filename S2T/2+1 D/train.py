@@ -36,8 +36,6 @@ train_dataset = DL.SNLT_Dataset(split='train',frames_path = frames_path, dev=dev
 dev_dataset = DL.SNLT_Dataset(split='dev', frames_path = frames_path, dev=device, create_vocabulary = True)
 test_dataset = DL.SNLT_Dataset(split='test', frames_path = frames_path, dev=device, create_vocabulary = True)
 
-model_cp = os.path.join('models','best_model') #to save the model state
-
 if args.sign2text:
     import adapted_transformer as tf
     src_vocab = args.d_model
@@ -90,7 +88,7 @@ if __name__ == '__main__':
             dev_losses.append(dev_loss)
 
             if not best_loss or (dev_loss < best_loss):
-                torch.save(model.state_dict(), model_cp)
+                torch.save(model.state_dict(), 'best_model')
 
             if epoch > (args.epochs // 3) and epoch % 25 == 0:
                 try:
@@ -102,5 +100,5 @@ if __name__ == '__main__':
         print('-' * 89)
         print('Exiting from training early')
 
-torch.save(train_losses, 'models/train_losses')
-torch.save(dev_losses, 'models/dev_losses')
+torch.save(train_losses, 'train_losses')
+torch.save(dev_losses, 'dev_losses')
