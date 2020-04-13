@@ -1,4 +1,3 @@
-import transformer as tf
 import argparse
 import os
 import DataLoader as DL
@@ -19,7 +18,7 @@ parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
 parser.add_argument('-w', '--workers', type=int, help='number of workers to load data', default = 2)
-parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
+parser.add_argument('--frames_path', type=str, default='data/tensors/', help='checkpoint to load the model')
 args = parser.parse_args()
 
 #torch.set_default_tensor_type('torch.cuda.FloatTensor')
