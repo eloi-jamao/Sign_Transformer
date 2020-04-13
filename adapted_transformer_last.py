@@ -1,3 +1,4 @@
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -5,9 +6,9 @@ import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
 from torchtext import data, datasets
-import os
-from DataLoader import decode_sentence
-#https://nlp.seas.harvard.edu/2018/04/03/attention.html
+from torchvision.models.video import r2plus1d_18
+import torchvision.transforms as transforms
+from PIL import Image
 
 class EncoderDecoder(nn.Module):
     """
@@ -16,6 +17,18 @@ class EncoderDecoder(nn.Module):
     """
     def __init__(self, encoder, decoder, src_embed, tgt_embed, generator):
         super(EncoderDecoder, self).__init__()
+        self.convnet = nn.Sequential(*list(r2plus1d_18(pretrained=True).children())[:-1])
+
+        #We define which parameters to train
+        for layer in self.convnet:
+            for param in layer.parameters():
+                param.requires_grad = False
+
+        #for layer in self.convnet[4][1]:
+        for param in self.convnet[4][1].parameters():
+            param.requires_grad = True
+        self.len = 30
+        self.intermediate = nn.Linear(512,128)
         self.encoder = encoder
         self.decoder = decoder
         self.src_embed = src_embed
@@ -23,9 +36,18 @@ class EncoderDecoder(nn.Module):
         self.generator = generator
 
     def forward(self, src, tgt, src_mask, tgt_mask):
-        "Take in and process masked src and target sequences."
-        return self.decode(self.encode(src, src_mask), src_mask,
-                            tgt, tgt_mask)
+        "Take 0 in and process masked src and target sequences."
+        #src = src.squeeze(dim = 0)
+        src = [self.convnet(x.squeeze(dim = 0)) for x in torch.split(src,1,dim=0)]
+        #print(len(src), src[0].size())
+        #src = torch.reshape(src, (src.size()[0],512))
+        src = [torch.reshape(x, (1,x.size()[0],512)) for x in src]
+        #print(len(src), src[0].size())
+        src = torch.cat(src,dim=0)
+        #print(src.size())
+        features = self.intermediate(src)
+        out = self.decode(self.encode(features, src_mask), src_mask, tgt, tgt_mask)
+        return out
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
@@ -141,6 +163,7 @@ def attention(query, key, value, mask=None, dropout=None):
     scores = torch.matmul(query, key.transpose(-2, -1)) \
              / math.sqrt(d_k)
     if mask is not None:
+        #print(type(scores),scores.size(),mask.size())
         scores = scores.masked_fill(mask == 0, -1e9)
     p_attn = F.softmax(scores, dim = -1)
     if dropout is not None:
@@ -208,8 +231,8 @@ class PositionalEncoding(nn.Module):
 
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) *
+        position = torch.arange(0., max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0., d_model, 2) *
                              -(math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
@@ -232,7 +255,7 @@ def make_model(src_vocab, tgt_vocab, N=6,
         Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
         Decoder(DecoderLayer(d_model, c(attn), c(attn),
                              c(ff), dropout), N),
-        nn.Sequential(Embeddings(d_model, src_vocab), c(position)),
+        nn.Sequential(c(position)), #Need to change input embedding, i removed Embeddings(d_model, src_vocab),
         nn.Sequential(Embeddings(d_model, tgt_vocab), c(position)),
         Generator(d_model, tgt_vocab))
 
@@ -247,7 +270,8 @@ class Batch:
     "Object for holding a batch of data with mask during training."
     def __init__(self, src, trg=None, pad=0):
         self.src = src
-        self.src_mask = (src != pad).unsqueeze(-2)
+        self.src_mask = (torch.sum(src.view(src.size()[0],src.size()[1], -1),dim=-1) != 0).unsqueeze(-2)
+        #self.src_mask = (torch.sum(src, dim=-1) != pad).unsqueeze(-2)
         if trg is not None:
             self.trg = trg[:, :-1]
             self.trg_y = trg[:, 1:]
@@ -263,27 +287,30 @@ class Batch:
             subsequent_mask(tgt.size(-1)).type_as(tgt_mask.data))
         return tgt_mask
 
+
 def run_epoch(data_iter, model, loss_compute, device):
     "Standard Training and Logging Function"
-    start = time.time()
     total_tokens = 0
     total_loss = 0
     tokens = 0
-    for i, batch in enumerate(data_iter):
-        frames, src, trg = batch
+    start = time.time()
+    for i, batch in enumerate(data_iter.pool_iterate()):
+        src, trg = batch
+        #src = torch.load(img_path)
         batch = Batch(src, trg)
+        loading_time = time.time()-start
+        print("Loading time: ", loading_time)
         out = model.forward(batch.src.to(device), batch.trg.to(device),
                             batch.src_mask.to(device), batch.trg_mask.to(device))
-        loss = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
+        loss  = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
         total_loss += loss
         total_tokens += batch.ntokens
         tokens += batch.ntokens
-        if i % 50 == 1:
-            elapsed = time.time() - start
-            print("Epoch Step: %d Loss: %f Tokens per Sec: %f" %
-                    (i, loss / batch.ntokens, tokens / elapsed))
-            start = time.time()
-            tokens = 0
+
+        model_time = time.time() - loading_time -start
+        print("Epoch Step: {} Loss: {:f} Loading time: {} Model time: {}".format(int(i), loss/float(batch.ntokens),loading_time, model_time))  #Tokens per Sec: {tokens / elapsed}")
+        start = time.time()
+        tokens = 0
     return total_loss / total_tokens
 
 global max_src_in_batch, max_tgt_in_batch
@@ -404,42 +431,19 @@ def rebatch(pad_idx, batch):
 
 def greedy_decode(model, src, src_mask, max_len, start_symbol):
     memory = model.encode(src, src_mask)
-    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
+    ys = torch.ones(1, 1, dtype=torch.int64).fill_(start_symbol)
+    print(ys.type())
     for i in range(max_len-1):
         out = model.decode(memory, src_mask,
                            Variable(ys),
-                           Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
+                           Variable(subsequent_mask(ys.size(1))
+                                    .type_as(src.data)))
         prob = model.generator(out[:, -1])
         _, next_word = torch.max(prob, dim = 1)
         next_word = next_word.data[0]
         ys = torch.cat([ys,
-                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
+                        torch.ones(1, 1, dtype=torch.int64).fill_(next_word)], dim=1)
     return ys
-
-def beam_search(model, src, src_mask, max_len, start_symbol, top_k = 2):
-    '''
-    Not implemented
-    '''
-    memory = model.encode(src, src_mask)
-    print(memory.size())
-    ys = torch.ones(1, 1).fill_(start_symbol).type_as(src.data)
-    print(ys)
-    sentences=[]
-    for i in range(1):
-        out = model.decode(memory, src_mask,
-                           Variable(ys),
-                           Variable(subsequent_mask(ys.size(1)).type_as(src.data)))
-        prob = model.generator(out[:, -1])
-        print(prob.size())
-        _, next_words = torch.topk(prob, k=top_k, dim=1)
-        print(next_words.size())
-    '''
-        _, next_word = torch.max(prob, dim = 1)
-        next_word = next_word.data[0]
-        ys = torch.cat([ys,
-                        torch.ones(1, 1).type_as(src.data).fill_(next_word)], dim=1)
-    return ys
-    '''
 
 def evaluate_model(model, loader, device, max_seq, dictionary):
     token_corpus = []
@@ -464,55 +468,18 @@ def evaluate_model(model, loader, device, max_seq, dictionary):
 
 
 if __name__ == '__main__':
-    from torch.utils.data import DataLoader
-    import DataLoader as dl
 
-    model_dir = './models/G2T' #folder to save the model state
-    src_vocab = 11
-    trg_vocab = 11
-    batch_size = 5
-    epochs = 5
-    N_blocks = 2
-
-    train_loader = data_gen(src_vocab, batch_size, 10)
-    valid_loader = data_gen(src_vocab, batch_size, 10)
-
-    criterion = LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
-    model = make_model(src_vocab, trg_vocab, N=N_blocks, d_model=512, h=8)
-    model_opt = NoamOpt(model.src_embed[0].d_model, 1, 400,
-            torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
-
-    test_dataset = dl.SNLT_Dataset(split='test', gloss = True)
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, drop_last=True)
-
-    model.eval()
-    src = Variable(torch.LongTensor([[1,2,3,4,5,6,7,8,9,10]]) )
-    src_mask = Variable(torch.ones(1, 1, 10) )
-    print(greedy_decode(model, src, src_mask, max_len=10, start_symbol=1))
+    src = torch.load('data/tensors/images')
+    trg = torch.randint(9,(1,15))
+    device = 'cpu'
+    criterion = LabelSmoothing(size=10, padding_idx=0, smoothing=0.0)
+    model = make_model(128, 10, N=2, d_model=128, d_ff = 512, h=8)
+    model.to(device)
+    loss_compute = SimpleLossCompute(model.generator, criterion, None)
 
 
-
-    '''
-    train_losses = []
-    valid_losses = []
-    best_loss = None
-    try:
-
-        for epoch in range(epochs):
-            print('Starting epoch', epoch)
-            model.train()
-            train_loss = run_epoch(train_loader, model,
-                                   SimpleLossCompute(model.generator, criterion, model_opt))
-            model.eval()
-            valid_loss = run_epoch(valid_loader, model,
-                                   SimpleLossCompute(model.generator, criterion, None))
-
-            train_losses.append(train_loss)
-            valid_losses.append(valid_loss)
-            if not best_loss or valid_loss < best_loss:
-                torch.save(model.state_dict(), os.path.join(model_dir, f'cp_epoch_{epoch}'))
-
-    except KeyboardInterrupt:
-        print('-' * 89)
-        print('Exiting from training early')
-    '''
+    batch = Batch(src, trg)
+    out = model.forward(batch.src.to(device), batch.trg.to(device),
+                        batch.src_mask, batch.trg_mask.to(device))
+    loss = loss_compute(out.to(device), batch.trg_y.to(device), batch.ntokens.to(device))
+    print(loss)

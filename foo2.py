@@ -1,111 +1,73 @@
-from torch.autograd import Variable
+import transformer as tf
+import argparse
 import os
-import json
+import DataLoader as DL
 import torch
-from torch.utils import data
-from torch import nn
-import dataLoaderUtils
-# from nltk.translate.bleu_score import sentence_bleu
+from torch.utils.data import DataLoader
+import opts
+import seq2seq
 
-'''Loading keypoints'''
-videos_folder = os.path.join(os.getcwd(), "data", "keypoints", "test")
+args = opts.parse_opts()
 
+if torch.cuda.is_available() and args == 'cuda':
+    args.device = 'cuda'
+else:
+    args.device = 'cpu'
+print('Using device for training:', args.device)
 
-class Dataset(data.Dataset):
+train_dataset = DL.SNLT_Dataset(split='train', gloss=True)
+dev_dataset = DL.SNLT_Dataset(split='dev', gloss=True)
+test_dataset = DL.SNLT_Dataset(split='test', gloss=True)
 
-    def __init__(self, data_openpose_json_dir, labels_openpose_json_dir, padding=False):
+src_vocab = len(train_dataset.gloss_dictionary.idx2word)
+trg_vocab = len(train_dataset.dictionary.idx2word)
+args.src_vocab = src_vocab
+args.trg_vocab = trg_vocab
+print('Gloss vocab of', src_vocab, 'german vocab of', trg_vocab)
 
-        self.data_folders = os.listdir(data_openpose_json_dir)
-        self.labels_folders = os.listdir(labels_openpose_json_dir)
+train_loader = DataLoader(train_dataset, batch_size=args.b_size, shuffle=True, drop_last=True)
+dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, drop_last=True)
+test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True, drop_last=True)
 
-        self.data_samples = []
-        self.padding = padding
-        self.sample_length = 0
+criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
 
-        self.data_dirs = []
-        self.labels_dirs = []
+model = seq2seq.Seq2Seq(args)
 
-        for folder in self.data_folders:
-            sample_data_path = os.path.join(data_openpose_json_dir, folder)
-            self.data_dirs.append(sample_data_path)
-            sample_labels_path = os.path.join(labels_openpose_json_dir, folder)
-            self.labels_dirs.append(sample_labels_path)
-            frames = os.listdir(sample_data_path)
-            self.sample_length = len(frames) if len(frames) > self.sample_length else self.sample_length
+if args.checkpoint is not None:
+    model.load_state_dict(torch.load(args.checkpoint))
+    print('Loaded state_dict to the model before starting train')
 
-    def __len__(self):
-        return len(self.data_folders)
+# model.to(args.device)
+model_opt = tf.NoamOpt(model.src_embed[0].d_model, 1, 400,
+                       torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
 
-    def __getitem__(self, index):
+train_losses = []
+dev_losses = []
+best_loss = None
 
-        data_sample_path = self.data_dirs[index]
-        x = self.read_sample(data_sample_path)
-        x = torch.tensor(x)
-        label_sample_path = self.labels_dirs[index]
+try:
+    for epoch in range(args.epochs):
+        print('Starting epoch', epoch)
 
-        if self.padding:
-            n = self.sample_length - len(x)
-            if n > 0:
-                padding = torch.cat(n*[torch.zeros(x[0].shape).unsqueeze(0)])
-                x = torch.cat((x, padding))
-        y = x
-        return x, y
+        model.train()
+        train_loss = tf.run_epoch(train_loader, model,
+                                  tf.SimpleLossCompute(model.generator, criterion, model_opt),
+                                  args.device)
 
-    def read_sample(self, sample_path):
-        json_files = os.listdir(sample_path)
-        sample = []
-        for filename in json_files:
-            frame_path = os.path.join(sample_path, filename)
-            frame = dataLoaderUtils.read_json_2_openpose1dframe(frame_path)
-            sample.append(frame)
-        return sample
-# def skp(prev, data):
+        model.eval()
+        dev_loss = tf.run_epoch(dev_loader, model,
+                                tf.SimpleLossCompute(model.generator, criterion, None),
+                                args.device)
 
-# PRETRAIN
-class Autoencoder(nn.Module):
-    def __init__(self):
-        super(Autoencoder, self).__init__()
+        train_losses.append(train_loss)
+        dev_losses.append(dev_loss)
 
-        self.encoder = nn.Sequential(
-            nn.Conv2d(242, 200, kernel_size=(3, 10)),
-            nn.ReLU(True),
-            nn.Conv2d(200, 100, kernel_size=(1, 3)),
-            nn.ReLU(True)
-        )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(100, 200, kernel_size=(1, 3)),
-            nn.ReLU(True),
-            nn.ConvTranspose2d(200, 242, kernel_size=(3, 10)),
-            nn.ReLU(True))
+        if not best_loss or (dev_loss < best_loss):
+            torch.save(model.state_dict(), args.model_cp)
 
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
+        torch.save(train_losses, args.train_losses)
+        torch.save(dev_losses, args.dev_losses)
 
-
-if __name__ == '__main__':
-    num_epochs = 20 #you can go for more epochs, I am using a mac
-    batch_size = 128
-
-    model = Autoencoder().cpu()
-    distance = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
-
-    trainset = Dataset(videos_folder, videos_folder, True)
-    dataloader = torch.utils.data.DataLoader(trainset, batch_size=32, shuffle=False, num_workers=1)
-
-    for epoch in range(num_epochs):
-        for data in dataloader:
-            img, _ = data
-            img = Variable(img).cpu()
-            # ===================forward=====================
-            output = model(img)
-            loss = distance(output, img)
-            # ===================backward====================
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-        # ===================log========================
-        print("epoch : {}/{}, loss = {:.6f}".format(epoch + 1, num_epochs, loss))
-        # print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss))
+except KeyboardInterrupt:
+    print('-' * 89)
+    print('Exiting from training early')

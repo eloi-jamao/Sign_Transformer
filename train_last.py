@@ -1,12 +1,11 @@
 import transformer as tf
 import argparse
 import os
-import DataLoader as DL
+import DataLoader_from_tensor as DL
 import torch
 from torch.utils.data import DataLoader
 import torch.multiprocessing as mp
 import time
-import bleu
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
 parser.add_argument('-e2e', '--end2end', action='store_true', default = False, help = 'Train end to end model')
@@ -18,8 +17,7 @@ parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward repres
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
-parser.add_argument('-w', '--workers', type=int, help='number of workers to load data', default = 2)
-parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
+parser.add_argument('-w', '--workers', type=int, help='learning rate', default = 2)
 args = parser.parse_args()
 
 #torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -30,16 +28,16 @@ else:
     device = 'cpu'
 print('Using device for training: ', device)
 
-frames_path = args.frames_path
+frames_path = '/home/joaquims/dataset_ssd/train_L6_W2/'
 
 train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path , create_vocabulary = True )
 dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
 test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
 
-model_cp = './models/best_model' #to save the model state
+model_cp = './models/G2T/best_model' #to save the model state
 
 if args.end2end:
-    import adapted_transformer as tf
+    import adapted_transformer_last as tf
     src_vocab = 128
     print('Training end to end model')
 
@@ -51,8 +49,8 @@ else:
 trg_vocab = len(train_dataset.dictionary.idx2word)
 
 
-train_loader = DataLoader(train_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
-dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
+train_loader = DL.Custom_iterator(train_dataset, batch_size=args.b_size, shuff=False, num_workers = args.workers)
+dev_loader = DL.Custom_iterator(dev_dataset, batch_size=args.b_size, shuff=True, num_workers = args.workers)
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
@@ -81,26 +79,21 @@ if __name__ == '__main__':
                                       tf.SimpleLossCompute(model.generator, criterion, model_opt),
                                       device)
 
-            model.eval()
-            dev_loss = tf.run_epoch(dev_loader, model,
-                                      tf.SimpleLossCompute(model.generator, criterion, None),
-                                      device)
+            #model.eval()
+            #dev_loss = tf.run_epoch(dev_loader, model,
+            #                          tf.SimpleLossCompute(model.generator, criterion, None),
+            #                          device)
 
             train_losses.append(train_loss)
-            dev_losses.append(dev_loss)
+            #dev_losses.append(dev_loss)
 
             if not best_loss or (dev_loss < best_loss):
                 torch.save(model.state_dict(), model_cp)
 
-            if epoch > (args.epochs // 3) and epoch % 25 == 0:
-                try:
-                    bleu.score_model(model, test_loader, device, train_dataset.dictionary)
-                except:
-                    print('Bleu score error occurred, continuing with training')
+            torch.save(train_losses, 'models/G2T/train_losses')
+            #torch.save(dev_losses, 'models/G2T/dev_losses')
+
 
     except KeyboardInterrupt:
         print('-' * 89)
         print('Exiting from training early')
-
-torch.save(train_losses, 'models/train_losses')
-torch.save(dev_losses, 'models/dev_losses')
