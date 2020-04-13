@@ -100,5 +100,5 @@ if __name__ == '__main__':
         print('-' * 89)
         print('Exiting from training early')
 
-torch.save(train_losses, 'train_losses')
-torch.save(dev_losses, 'dev_losses')
+    torch.save(train_losses, 'train_losses')
+    torch.save(dev_losses, 'dev_losses')
