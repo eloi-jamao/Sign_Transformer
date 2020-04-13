@@ -7,12 +7,12 @@ import torch
 from PIL import Image
 import time
 from multiprocessing import Pool
-
+import os
 
 class SNLT_Dataset(Dataset):
     def __init__(self, split, dev = 'cpu',
                  frames_path = "data/frames/",
-                 csv_path = "data/annotations/",
+                 csv_path = os.path.join(data,annotations),
                  gloss = False,
                  create_vocabulary = False,
                  long_clips = 6, window_clips = 2):
@@ -26,16 +26,16 @@ class SNLT_Dataset(Dataset):
         self.gloss = gloss
         self.device = dev
         #Paths
-        self.img_dir = frames_path + self.split
+        self.img_dir = os.path.join(frames_path,self.split)
         self.csv_path = csv_path
-        self.csv_file = csv_path + self.split + ".csv"
+        self.csv_file = os.path.join(csv_path,self.split) + ".csv"
 
         #Clips
         self.long_clips = long_clips
         self.window_clips = window_clips
 
         if self.gloss:
-            self.gloss_dictionary = Dictionary(vocab_path='data/gloss_vocabulary.txt', gloss = True)
+            self.gloss_dictionary = Dictionary(vocab_path=os.path.join('data','gloss_vocabulary.txt'), gloss = True)
         self.dictionary = Dictionary()
 
         #Open the csv file and extract img_folder, gloss sentence and label sentence

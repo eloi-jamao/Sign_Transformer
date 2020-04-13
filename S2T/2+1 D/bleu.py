@@ -159,7 +159,7 @@ def score_model(model, loader, device, dictionary, verbose = False):
 
 if __name__ == '__main__':
 
-    import transformer as tf
+    import adapted_transformer as tf
     import DataLoader as DL
     import torch
     from torch.utils.data import DataLoader
@@ -170,14 +170,15 @@ if __name__ == '__main__':
     parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default = 2048)
     parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
     parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
+    parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
     args = parser.parse_args()
 
-    train_dataset = DL.SNLT_Dataset(split='train', gloss = True)
-    test_dataset = DL.SNLT_Dataset(split='test', gloss = True)
+    train_dataset = DL.SNLT_Dataset(split='train', frames_path=args.frames_path, gloss = True)
+    test_dataset = DL.SNLT_Dataset(split='test', frames_path=args.frames_path, gloss = True)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
 
 
-    src_vocab = len(train_dataset.gloss_dictionary.idx2word)
+    src_vocab = args.d_model
     trg_vocab = len(train_dataset.dictionary.idx2word)
 
     device = 'cpu'
@@ -192,5 +193,4 @@ if __name__ == '__main__':
 
     score_model(model, test_loader, device, train_dataset.dictionary, verbose = True)
 
-    file_path = './models/G2T/NLL/bs128_NLL/generated_corpus.txt'
-    #write_corpus(pred_corpus, file_path)
+    

@@ -9,7 +9,7 @@ import time
 import bleu
 
 parser = argparse.ArgumentParser(description='PyTorch Transformer Training')
-parser.add_argument('-e2e', '--end2end', action='store_true', default = False, help = 'Train end to end model')
+parser.add_argument('-s2t', '--sign2text', action='store_true', default = False, help = 'Train sign to text model')
 parser.add_argument('-e', '--epochs', type=int, default=500, help='upper epoch limit')
 parser.add_argument('-b', '--b_size', type=int, help='batch size', required = True)
 parser.add_argument('-cp', '--checkpoint', type=str, default=None, help='checkpoint to load the model')
@@ -32,15 +32,15 @@ print('Using device for training: ', device)
 
 frames_path = args.frames_path
 
-train_dataset = DL.SNLT_Dataset(split='train',dev=device, frames_path = frames_path , create_vocabulary = True )
-dev_dataset = DL.SNLT_Dataset(split='dev', dev=device, frames_path = frames_path, create_vocabulary = True)
-test_dataset = DL.SNLT_Dataset(split='test', dev=device, frames_path = frames_path, create_vocabulary = True)
+train_dataset = DL.SNLT_Dataset(split='train',frames_path = frames_path, dev=device,  create_vocabulary = True )
+dev_dataset = DL.SNLT_Dataset(split='dev', frames_path = frames_path, dev=device, create_vocabulary = True)
+test_dataset = DL.SNLT_Dataset(split='test', frames_path = frames_path, dev=device, create_vocabulary = True)
 
-model_cp = './models/best_model' #to save the model state
+model_cp = os.path.join('models','best_model') #to save the model state
 
-if args.end2end:
+if args.sign2text:
     import adapted_transformer as tf
-    src_vocab = 128
+    src_vocab = args.d_model
     print('Training end to end model')
 
 else:
@@ -53,7 +53,7 @@ trg_vocab = len(train_dataset.dictionary.idx2word)
 
 train_loader = DataLoader(train_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
 dev_loader = DataLoader(dev_dataset, batch_size=args.b_size, shuffle=True, num_workers = args.workers)
-test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=1)
 
 criterion = tf.LabelSmoothing(size=trg_vocab, padding_idx=0, smoothing=0.0)
 model = tf.make_model(src_vocab, trg_vocab, N=args.n_blocks, d_model=args.d_model, d_ff=args.d_ff, h=args.att_heads)

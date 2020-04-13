@@ -10,8 +10,8 @@ from multiprocessing import Pool
 
 
 class SNLT_Dataset(Dataset):
-    def __init__(self, split, dev = 'cpu',
-                 frames_path = "data/frames/",
+    def __init__(self, split, frames_path,
+                 dev = 'cpu',
                  csv_path = "data/annotations/",
                  gloss = False,
                  create_vocabulary = False,
