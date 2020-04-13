@@ -1,1 +1,0 @@
-__all__ = ['main', 'resnets_3d']
