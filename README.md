@@ -21,7 +21,7 @@ The code used was an adapted version of the [Annotated Transformer](https://nlp.
 
 ## Requirements
 - Python 3
-- Pytorch
+- pip install -r requirements.txt
 - Download and extract the dataset [RWTH-PHOENIX-Weather 2014 T](https://www-i6.informatik.rwth-aachen.de/~koller/RWTH-PHOENIX-2014-T/)
 
 ## Usage
