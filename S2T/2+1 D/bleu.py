@@ -170,21 +170,35 @@ if __name__ == '__main__':
     parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default = 2048)
     parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
     parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
+    parser.add_argument('-l', '--long', type=int, help='clip window lenght', default = 6)
+    parser.add_argument('-o', '--overlap', type=int, help='clip window overlap', default = 2)
     parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
     args = parser.parse_args()
-
-    train_dataset = DL.SNLT_Dataset(split='train', frames_path=args.frames_path)
-    test_dataset = DL.SNLT_Dataset(split='test', frames_path=args.frames_path)
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
-
-
-    src_vocab = args.d_model
-    trg_vocab = len(train_dataset.dictionary.idx2word)
 
     if torch.cuda.is_available():
         device = 'cuda'
     else:
         device = 'cpu'
+
+    train_dataset = DL.SNLT_Dataset(split='train',
+                                    frames_path = args.frames_path
+                                    dev=device,
+                                    create_vocabulary = True,
+                                    long_clips = args.long,
+                                    window_clips = args.overlap)
+
+    test_dataset = DL.SNLT_Dataset(split='test',
+                                    frames_path = args.frames_path
+                                    dev=device,
+                                    create_vocabulary = True,
+                                    long_clips = args.long,
+                                    window_clips = args.overlap)
+
+    test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
+
+
+    src_vocab = args.d_model
+    trg_vocab = len(train_dataset.dictionary.idx2word)    
     model_cp = args.model
     N_blocks = args.n_blocks
     d_model = args.d_model

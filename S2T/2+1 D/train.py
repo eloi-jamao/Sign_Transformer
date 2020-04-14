@@ -16,9 +16,11 @@ parser.add_argument('-dm', '--d_model', type=int, help='size of intermediate rep
 parser.add_argument('-df', '--d_ff', type=int, help='size of feed forward representations', default = 2048)
 parser.add_argument('-n', '--n_blocks', type=int, help='number of blocks for the encoder and decoder', default = 6)
 parser.add_argument('-at', '--att_heads', type=int, help='number of attention heads per block', default = 8)
+parser.add_argument('-l', '--long', type=int, help='clip window lenght', default = 6)
+parser.add_argument('-o', '--overlap', type=int, help='clip window overlap', default = 2)
 parser.add_argument('-lr', '--learning_rate', type=float, help='learning rate', default = 0.0)
 parser.add_argument('-w', '--workers', type=int, help='number of workers to load data', default = 2)
-parser.add_argument('--frames_path', type=str, default='data/tensors/', help='checkpoint to load the model')
+parser.add_argument('--frames_path', type=str, default='data/tensors/', help='folder with frames or tensors')
 args = parser.parse_args()
 
 #torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -31,9 +33,26 @@ print('Using device for training: ', device)
 
 frames_path = args.frames_path
 
-train_dataset = DL.SNLT_Dataset(split='train',frames_path = frames_path, dev=device,  create_vocabulary = True )
-dev_dataset = DL.SNLT_Dataset(split='dev', frames_path = frames_path, dev=device, create_vocabulary = True)
-test_dataset = DL.SNLT_Dataset(split='test', frames_path = frames_path, dev=device, create_vocabulary = True)
+train_dataset = DL.SNLT_Dataset(split='train',
+                                frames_path = frames_path,
+                                dev=device,
+                                create_vocabulary = True,
+                                long_clips = args.long,
+                                window_clips = args.overlap)
+
+dev_dataset = DL.SNLT_Dataset(split='dev',
+                              frames_path = frames_path,
+                              dev=device,
+                              create_vocabulary = True,
+                              long_clips = args.long,
+                              window_clips = args.overlap)
+
+test_dataset = DL.SNLT_Dataset(split='test',
+                               frames_path = frames_path,
+                               dev=device,
+                               create_vocabulary = True,
+                               long_clips = args.long,
+                               window_clips = args.overlap)
 
 if args.sign2text:
     import adapted_transformer as tf
