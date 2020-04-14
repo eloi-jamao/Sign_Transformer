@@ -106,7 +106,7 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
 
 def reference_corpus(loader, dictionary):
     test_corpus = []
-    for frames, gloss, sentence in loader:
+    for frames, sentence in loader:
         sentence.squeeze_(dim=0)
         sent=[]
         for i in sentence:
@@ -140,6 +140,9 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
 def score_model(model, loader, device, dictionary, verbose = False):
     model.eval()
 
+    print('Loading reference corpus...')
+    test_corpus = reference_corpus(loader, dictionary)
+
     print('Generating corpus with model...')
     pred_corpus = tf.evaluate_model(model,
                                     loader,
@@ -147,8 +150,6 @@ def score_model(model, loader, device, dictionary, verbose = False):
                                     max_seq = 27,
                                     dictionary = dictionary)
 
-    print('Loading reference corpus...')
-    test_corpus = reference_corpus(loader, dictionary)
     if verbose:
         print('------Example sample-------')
         print('Reference sentence:\n',test_corpus[0][0],'\nGenerated equivalent:\n',pred_corpus[0])
