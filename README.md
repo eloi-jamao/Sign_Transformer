@@ -43,6 +43,14 @@ For faster training we extracted the features previously using img2tensor.py and
 ```
 python3 img2tensor.py -h
 ```
+To train the Sign to text model without doing this process beforehand, it is possible to train only extracting the dataset and using the frames. To do so, comment/uncomment the following lines:
+Line 67 from DataLoader.py
+```
+else:
+            #clips = self.make_clips(img_fold, self.long_clips, self.window_clips) #Uncomment this line
+            clips = torch.load(img_fold[:-1]) #Comment this other one
+            return (clips, label)
+```
 #### Using 3D Resnet as CNN for feature extraction
 
 ```python
