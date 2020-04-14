@@ -31,8 +31,8 @@ class SNLT_Dataset(Dataset):
         self.csv_file = csv_path + self.split + ".csv"
 
         #Clips
-        self.long_clips = long_clips
-        self.window_clips = window_clips
+        self.long = long_clips
+        self.window = window_clips
 
         self.gloss_dictionary = Dictionary(vocab_path='../../data/gloss_vocabulary.txt', gloss = True)
         self.dictionary = Dictionary()
@@ -64,19 +64,15 @@ class SNLT_Dataset(Dataset):
             gloss_sent = process_sentence(self.samples[idx][1], self.gloss_dictionary)
             return (img_fold, gloss_sent, label)
         else:
-            #clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
+            #clips = self.make_clips(img_fold)
             clips = torch.load(img_fold[:-1])
             return (clips, label)
 
-    def make_clips(self, image_folder, long, window, max_len = 60):
+    def make_clips(self, image_folder, max_len = 46):
 
         tensors=[]
         window_list = []
         i = 0
-        #print(len(os.listdir(image_folder)))
-        #with Pool(8) as p:
-            #tensors = p.map(self.openimage, [ image for image in os.listdir(image_folder)], tensors)
-
         for image in os.listdir(image_folder):
             i += 1
             img = Image.open(os.path.join(image_folder,image))
@@ -84,9 +80,9 @@ class SNLT_Dataset(Dataset):
             #tensor.type(dtype=torch.int32)
 
             tensors.append(tensor)
-            if long >= i and i > long-window:
+            if self.long >= i and i > self.long-self.window:
                 window_list.append(tensor)
-            elif i > long:
+            elif i > self.long:
                 #print(len(window_list))
                 tensors.extend(window_list)
                 window_list = []
@@ -95,18 +91,18 @@ class SNLT_Dataset(Dataset):
         #print(len(tensors))
         sequence = torch.cat(tensors,dim=2)
         #print(sequence.shape)
-        sequence = torch.split(sequence, long, dim=2)
+        sequence = torch.split(sequence, self.long, dim=2)
         #print(sequence[0].shape,sequence[1].shape)
-        if sequence[-1].shape[2] < long:
+        if sequence[-1].shape[2] < self.long:
             sequenceA = torch.cat(sequence[:-1])
             #print('A',sequenceA.shape)
-            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,long-sequence[-1].shape[2],112,112))),dim=2)
+            sequenceB = torch.cat((sequence[-1],torch.zeros((1, 3,self.long-sequence[-1].shape[2],112,112))),dim=2)
             #print('B',sequenceB.shape)
             sequence = torch.cat((sequenceA,sequenceB), dim = 0)
         else:
             sequence = torch.cat(sequence,dim=0)
         #print(sequence.shape)
-        sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,6,112,112))), dim = 0)
+        sequence = torch.cat((sequence,torch.zeros((max_len-sequence.size()[0],3,self.long,112,112))), dim = 0)
         return sequence
 
     def openimage(self, image, tensors):
