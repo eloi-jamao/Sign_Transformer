@@ -415,7 +415,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
     src = model.intermediate(src)
     memory = model.encode(src, src_mask)
     ys = torch.ones(1, 1, dtype=torch.int64).fill_(start_symbol)
-    print(ys.type())
+    #print(ys.type())
     for i in range(max_len-1):
         out = model.decode(memory, src_mask,
                            Variable(ys),
