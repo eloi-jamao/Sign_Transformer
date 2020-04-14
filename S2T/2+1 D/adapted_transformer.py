@@ -408,13 +408,13 @@ def rebatch(pad_idx, batch):
     src, trg = batch.src.transpose(0, 1), batch.trg.transpose(0, 1)
     return Batch(src, trg, pad_idx)
 
-def greedy_decode(model, src, src_mask, max_len, start_symbol):
+def greedy_decode(model, src, src_mask, max_len, start_symbol, device):
     #print(src.shape)
     src = model.convnet(src.squeeze(dim=0))
     src = torch.reshape(src, (1,src.size()[0],512))
     src = model.intermediate(src)
     memory = model.encode(src, src_mask)
-    ys = torch.ones(1, 1, dtype=torch.int64).fill_(start_symbol)
+    ys = torch.ones(1, 1, dtype=torch.int64).fill_(start_symbol).to(device)
     #print(ys.type())
     for i in range(max_len-1):
         out = model.decode(memory, src_mask,
@@ -425,7 +425,7 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
         _, next_word = torch.max(prob, dim = 1)
         next_word = next_word.data[0]
         ys = torch.cat([ys,
-                        torch.ones(1, 1, dtype=torch.int64).fill_(next_word)], dim=1)
+                        torch.ones(1, 1, dtype=torch.int64).fill_(next_word).to(device)], dim=1)
     return ys
 
 def evaluate_model(model, loader, device, max_seq, dictionary):
@@ -437,7 +437,7 @@ def evaluate_model(model, loader, device, max_seq, dictionary):
                                   batch.src.to(device),
                                   batch.src_mask.to(device),
                                   max_len=max_seq,
-                                  start_symbol=1).squeeze(dim=0)
+                                  start_symbol=1, device = device).squeeze(dim=0)
 
         pred = []
         for index in full_pred:
