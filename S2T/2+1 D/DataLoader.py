@@ -65,7 +65,7 @@ class SNLT_Dataset(Dataset):
             return (img_fold, gloss_sent, label)
         else:
             #clips = self.make_clips(img_fold, self.long_clips, self.window_clips)
-            clips = torch.load(img_fold)
+            clips = torch.load(img_fold[:-1])
             return (clips, label)
 
     def make_clips(self, image_folder, long, window, max_len = 60):

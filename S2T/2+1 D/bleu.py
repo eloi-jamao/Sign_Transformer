@@ -173,8 +173,8 @@ if __name__ == '__main__':
     parser.add_argument('--frames_path', type=str, default='data/tensors', help='checkpoint to load the model')
     args = parser.parse_args()
 
-    train_dataset = DL.SNLT_Dataset(split='train', frames_path=args.frames_path, gloss = True)
-    test_dataset = DL.SNLT_Dataset(split='test', frames_path=args.frames_path, gloss = True)
+    train_dataset = DL.SNLT_Dataset(split='train', frames_path=args.frames_path)
+    test_dataset = DL.SNLT_Dataset(split='test', frames_path=args.frames_path)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle = False)
 
 
@@ -192,5 +192,3 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
 
     score_model(model, test_loader, device, train_dataset.dictionary, verbose = True)
-
-    
