@@ -206,6 +206,7 @@ if __name__ == '__main__':
     att_heads = args.att_heads
 
     model = tf.make_model(src_vocab, trg_vocab, N=N_blocks, d_model=d_model, d_ff=d_ff, h= att_heads)
+    model.to(device)
     model.load_state_dict(torch.load(model_cp, map_location=torch.device(device)))
 
     score_model(model, test_loader, device, train_dataset.dictionary, verbose = True)
