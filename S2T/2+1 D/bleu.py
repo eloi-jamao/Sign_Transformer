@@ -181,7 +181,10 @@ if __name__ == '__main__':
     src_vocab = args.d_model
     trg_vocab = len(train_dataset.dictionary.idx2word)
 
-    device = 'cpu'
+    if torch.cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
     model_cp = args.model
     N_blocks = args.n_blocks
     d_model = args.d_model
