@@ -409,7 +409,7 @@ def rebatch(pad_idx, batch):
     return Batch(src, trg, pad_idx)
 
 def greedy_decode(model, src, src_mask, max_len, start_symbol):
-    print(src.shape)
+    #print(src.shape)
     src = model.convnet(src.squeeze(dim=0))
     src = torch.reshape(src, (1,x.size()[0],512))
     src = model.intermediate(src)
