@@ -1,4 +1,4 @@
-
+from DataLoader import decode_sentence
 import numpy as np
 import torch
 import torch.nn as nn
@@ -428,29 +428,6 @@ def greedy_decode(model, src, src_mask, max_len, start_symbol):
                         torch.ones(1, 1, dtype=torch.int64).fill_(next_word)], dim=1)
     return ys
 
-
-    self.intermediate = nn.Linear(512,128)
-    self.encoder = encoder
-    self.decoder = decoder
-    self.src_embed = src_embed
-    self.tgt_embed = tgt_embed
-    self.generator = generator
-
-def forward(self, src, tgt, src_mask, tgt_mask):
-    "Take 0 in and process masked src and target sequences."
-    #src = src.squeeze(dim = 0)
-    src = [self.convnet(x.squeeze(dim = 0)) for x in torch.split(src,1,dim=0)]
-    #print(len(src), src[0].size())
-    #src = torch.reshape(src, (src.size()[0],512))
-    src = [torch.reshape(x, (1,x.size()[0],512)) for x in src]
-    #print(len(src), src[0].size())
-    src = torch.cat(src,dim=0)
-    #print(src.size())
-    features = self.intermediate(src)
-    out = self.decode(self.encode(features, src_mask), src_mask, tgt, tgt_mask)
-    return out
-
-
 def evaluate_model(model, loader, device, max_seq, dictionary):
     token_corpus = []
     for i,batch in enumerate(loader):
@@ -471,6 +448,7 @@ def evaluate_model(model, loader, device, max_seq, dictionary):
         sentence = decode_sentence(pred[1:], dictionary)
         token_corpus.append(sentence)
     return token_corpus
+
 
 
 if __name__ == '__main__':
