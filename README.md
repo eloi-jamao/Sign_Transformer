@@ -47,9 +47,9 @@ To train the Sign to text model without doing this process beforehand, it is pos
 Line 67 from DataLoader.py
 ```
 else:
-            #clips = self.make_clips(img_fold, self.long_clips, self.window_clips) #Uncomment this line
-            clips = torch.load(img_fold[:-1]) #Comment this other one
-            return (clips, label)
+    #clips = self.make_clips(img_fold, self.long_clips, self.window_clips) #Uncomment this line
+    clips = torch.load(img_fold[:-1]) #Comment this other one
+    return (clips, label)
 ```
 #### Using 3D Resnet as CNN for feature extraction
 
