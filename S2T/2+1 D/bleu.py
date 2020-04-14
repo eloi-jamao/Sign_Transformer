@@ -181,14 +181,14 @@ if __name__ == '__main__':
         device = 'cpu'
 
     train_dataset = DL.SNLT_Dataset(split='train',
-                                    frames_path = args.frames_path
+                                    frames_path = args.frames_path,
                                     dev=device,
                                     create_vocabulary = True,
                                     long_clips = args.long,
                                     window_clips = args.overlap)
 
     test_dataset = DL.SNLT_Dataset(split='test',
-                                    frames_path = args.frames_path
+                                    frames_path = args.frames_path,
                                     dev=device,
                                     create_vocabulary = True,
                                     long_clips = args.long,
@@ -198,7 +198,7 @@ if __name__ == '__main__':
 
 
     src_vocab = args.d_model
-    trg_vocab = len(train_dataset.dictionary.idx2word)    
+    trg_vocab = len(train_dataset.dictionary.idx2word)
     model_cp = args.model
     N_blocks = args.n_blocks
     d_model = args.d_model
